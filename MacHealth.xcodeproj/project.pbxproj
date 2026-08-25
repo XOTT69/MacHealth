@@ -29,6 +29,8 @@
 		B020 /* iPhoneMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S020 /* iPhoneMainView.swift */; };
 		B021 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S021 /* ReportView.swift */; };
 		B022 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = S022 /* Assets.xcassets */; };
+		B023 /* CoreWLAN.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F001 /* CoreWLAN.framework */; };
+		B024 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F002 /* CoreLocation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXGroup section */
@@ -59,6 +61,8 @@
 				S020 /* iPhoneMainView.swift */,
 				S021 /* ReportView.swift */,
 				S022 /* Assets.xcassets */,
+				F001 /* CoreWLAN.framework */,
+				F002 /* CoreLocation.framework */,
 			);
 			sourceTree = "<group>";
 		};
@@ -103,13 +107,18 @@
 		S020 /* iPhoneMainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/iPhone/iPhoneMainView.swift; sourceTree = "<group>"; };
 		S021 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/Report/ReportView.swift; sourceTree = "<group>"; };
 		S022 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = MacHealth/Assets.xcassets; sourceTree = "<group>"; };
+		F001 /* CoreWLAN.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreWLAN.framework; path = System/Library/Frameworks/CoreWLAN.framework; sourceTree = SDKROOT; };
+		F002 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		FW1 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+				B023 /* CoreWLAN.framework in Frameworks */,
+				B024 /* CoreLocation.framework in Frameworks */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -237,6 +246,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = MacHealth;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "MacHealth v2.0";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "MacHealth використовує геолокацію лише для відображення назви та параметрів поточної Wi-Fi мережі.";
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.machealth.app;
@@ -262,6 +272,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = MacHealth;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "MacHealth v2.0";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "MacHealth використовує геолокацію лише для відображення назви та параметрів поточної Wi-Fi мережі.";
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.machealth.app;

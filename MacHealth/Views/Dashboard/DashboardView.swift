@@ -62,7 +62,7 @@ struct DashboardView: View {
                         Divider()
                         InfoRow(label: "Wi-Fi", value: mac.network.wifiSSID)
                         InfoRow(label: "IP", value: mac.network.localIP)
-                        InfoRow(label: "Сигнал", value: "\(mac.network.wifiSignal) dBm")
+                        InfoRow(label: "Сигнал", value: mac.network.signalDisplay)
                         InfoRow(label: "Швидкість", value: mac.network.wifiSpeed)
                     }
                     .cardStyle()
@@ -90,7 +90,7 @@ struct DashboardView: View {
                         InfoRow(label: "Здоров'я", value: mac.battery.healthDisplay)
                         InfoRow(label: "Цикли", value: "\(mac.battery.cycleCount)")
                         InfoRow(label: "Стан", value: mac.battery.condition)
-                        InfoRow(label: "Температура", value: mac.battery.temperature.formattedTemp)
+                        InfoRow(label: "Температура", value: mac.battery.temperatureDisplay)
                     }
                     .cardStyle()
                     

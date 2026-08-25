@@ -17,8 +17,10 @@ struct BatteryData {
     var maxCapacity: Int = 0
     var designCapacity: Int = 0
     var currentCharge: Int = 0
+    var chargePercent: Double = 0
     var isCharging: Bool = false
     var temperature: Double = 0
+    var temperatureAvailable: Bool = false
     var condition: String = "Нормальний"
     var timeRemaining: String = "—"
     var voltage: Double = 0
@@ -33,6 +35,15 @@ struct BatteryData {
 
     var healthDisplay: String {
         isPresent ? healthPercent.formattedPercent : "—"
+    }
+
+    var temperatureDisplay: String {
+        temperatureAvailable ? temperature.formattedTemp : "Недоступно"
+    }
+
+    var chargeDisplay: String {
+        guard isPresent else { return "—" }
+        return chargePercent.formattedPercent
     }
 }
 
@@ -102,12 +113,22 @@ struct NetworkData {
     var wifiSignal: Int = 0
     var wifiChannel: Int = 0
     var wifiSpeed: String = "—"
+    var wifiBSSID: String = "—"
     var localIP: String = "—"
     var externalIP: String = "—"
     var macAddress: String = "—"
     var isWifiOn: Bool = false
     var bluetoothVersion: String = "—"
     var interfaceName: String = "en0"
+    var wifiAccessMessage: String? = nil
+
+    var signalDisplay: String {
+        wifiSignal == 0 ? "—" : "\(wifiSignal) dBm"
+    }
+
+    var channelDisplay: String {
+        wifiChannel == 0 ? "—" : "\(wifiChannel)"
+    }
 }
 
 struct DisplayData {

@@ -19,9 +19,10 @@ struct NetworkToolsView: View {
                     Divider()
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         InfoRow(label: "Мережа (SSID)", value: mac.network.wifiSSID)
-                        InfoRow(label: "Сигнал", value: "\(mac.network.wifiSignal) dBm")
-                        InfoRow(label: "Канал", value: "\(mac.network.wifiChannel)")
+                        InfoRow(label: "Сигнал", value: mac.network.signalDisplay)
+                        InfoRow(label: "Канал", value: mac.network.channelDisplay)
                         InfoRow(label: "Швидкість", value: mac.network.wifiSpeed)
+                        InfoRow(label: "Точка доступу", value: mac.network.wifiBSSID)
                         InfoRow(label: "Локальна IP", value: mac.network.localIP)
                         InfoRow(label: "Зовнішня IP", value: externalIP)
                         InfoRow(label: "MAC-адреса", value: mac.network.macAddress)
@@ -29,6 +30,15 @@ struct NetworkToolsView: View {
                     }
                 }
                 .sectionCard()
+
+                if let message = mac.network.wifiAccessMessage {
+                    Label(message, systemImage: "location.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(.orange.opacity(0.08)))
+                }
                 
                 // Signal Quality
                 VStack(alignment: .leading, spacing: 8) {
@@ -41,7 +51,7 @@ struct NetworkToolsView: View {
                             Text(signalQuality)
                                 .font(.title3.bold())
                                 .foregroundStyle(signalColor)
-                            Text("RSSI: \(mac.network.wifiSignal) dBm")
+                            Text("RSSI: \(mac.network.signalDisplay)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -53,6 +63,8 @@ struct NetworkToolsView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
+            mac.requestWiFiAccess()
+            mac.fetchAll()
             network.fetchExternalIP { ip in
                 externalIP = ip
             }

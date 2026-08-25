@@ -80,8 +80,8 @@ struct MacOverviewView: View {
                     Divider()
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         InfoRow(label: "Wi-Fi", value: mac.network.wifiSSID)
-                        InfoRow(label: "Сигнал", value: "\(mac.network.wifiSignal) dBm")
-                        InfoRow(label: "Канал", value: "\(mac.network.wifiChannel)")
+                        InfoRow(label: "Сигнал", value: mac.network.signalDisplay)
+                        InfoRow(label: "Канал", value: mac.network.channelDisplay)
                         InfoRow(label: "Швидкість", value: mac.network.wifiSpeed)
                         InfoRow(label: "IP", value: mac.network.localIP)
                         InfoRow(label: "MAC", value: mac.network.macAddress)
@@ -132,7 +132,7 @@ struct BatteryDetailView: View {
                             .foregroundStyle(Color.statusColor(mac.battery.level))
                         
                         InfoRow(label: "Цикли заряду", value: "\(mac.battery.cycleCount)")
-                        InfoRow(label: "Температура", value: mac.battery.temperature.formattedTemp)
+                        InfoRow(label: "Температура", value: mac.battery.temperatureDisplay)
                         InfoRow(label: "Напруга", value: String(format: "%.2f В", mac.battery.voltage))
                         InfoRow(label: "Зарядка", value: mac.battery.isCharging ? "⚡ Так" : "Ні")
                         InfoRow(label: "Час", value: mac.battery.timeRemaining)
@@ -146,10 +146,10 @@ struct BatteryDetailView: View {
                     Label("Ємність", systemImage: "battery.100percent")
                         .font(.headline)
                     Divider()
-                    InfoRow(label: "Поточна максимальна", value: "\(mac.battery.maxCapacity) mAh")
-                    InfoRow(label: "Заводська", value: "\(mac.battery.designCapacity) mAh")
-                    InfoRow(label: "Поточний заряд", value: "\(mac.battery.currentCharge) mAh")
-                        InfoRow(label: "Втрачено", value: mac.battery.isPresent ? "\(max(0, mac.battery.designCapacity - mac.battery.maxCapacity)) mAh" : "—")
+                    InfoRow(label: "Поточна максимальна", value: mac.battery.isPresent ? "\(mac.battery.maxCapacity) mAh" : "—")
+                    InfoRow(label: "Заводська", value: mac.battery.isPresent ? "\(mac.battery.designCapacity) mAh" : "—")
+                    InfoRow(label: "Поточний заряд", value: mac.battery.isPresent ? "\(mac.battery.currentCharge) mAh (\(mac.battery.chargeDisplay))" : "—")
+                    InfoRow(label: "Втрачено", value: mac.battery.isPresent ? "\(max(0, mac.battery.designCapacity - mac.battery.maxCapacity)) mAh" : "—")
                 }
                 .sectionCard()
                 

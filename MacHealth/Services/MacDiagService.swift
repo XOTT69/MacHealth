@@ -1,7 +1,9 @@
 import Foundation
 import Combine
+import CoreLocation
+import CoreWLAN
 
-class MacDiagService: ObservableObject {
+final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var systemInfo = MacSystemInfo()
     @Published var battery = BatteryData()
     @Published var cpu = CPUData()
@@ -14,6 +16,14 @@ class MacDiagService: ObservableObject {
     @Published var overallHealth: HealthLevel = .excellent
     
     private var timer: Timer?
+    private var monitoringTick = 0
+    private let locationManager = CLLocationManager()
+
+    override init() {
+        super.init()
+        locationManager.delegate = self
+        requestWiFiAccess()
+    }
     
     func startMonitoring() {
         stopMonitoring()
@@ -26,6 +36,19 @@ class MacDiagService: ObservableObject {
     func stopMonitoring() {
         timer?.invalidate()
         timer = nil
+    }
+
+    /// SSID і BSSID на сучасних macOS захищені дозволом Location Services.
+    /// Без нього CoreWLAN повертає лише частину параметрів мережі.
+    func requestWiFiAccess() {
+        guard CLLocationManager.locationServicesEnabled() else { return }
+        if locationManager.authorizationStatus == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        fetchNetwork()
     }
     
     func fetchAll() {
@@ -49,8 +72,16 @@ class MacDiagService: ObservableObject {
     
     func fetchLiveData() {
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            self?.fetchCPU()
-            self?.fetchRAM()
+            guard let self else { return }
+            self.fetchCPU()
+            self.fetchRAM()
+            self.monitoringTick += 1
+            // Батарея й Wi‑Fi оновлюються раз на 15 секунд, щоб панель
+            // залишалася актуальною, але без важкого постійного опитування.
+            if self.monitoringTick.isMultiple(of: 3) {
+                self.fetchBattery()
+                self.fetchNetwork()
+            }
         }
     }
     
@@ -93,14 +124,19 @@ class MacDiagService: ObservableObject {
         }
         
         let cycleCount = extractInt(from: raw, key: "CycleCount")
-        let maxCap = extractInt(from: raw, key: "MaxCapacity")
+        // На Apple Silicon верхні MaxCapacity/CurrentCapacity часто містять
+        // відсотки. Фактичні mAh лежать у вкладеному BatteryData словнику.
         let desCap = extractInt(from: raw, key: "DesignCapacity")
-        let curCap = extractInt(from: raw, key: "CurrentCapacity")
+        let fullChargeCap = extractInt(from: raw, key: "FullChargeCapacity")
+        let remainingCap = extractInt(from: raw, key: "RemainingCapacity")
+        let reportedChargePercent = extractInt(from: raw, key: "CurrentCapacity")
+        let maxCap = fullChargeCap > 0 ? fullChargeCap : extractInt(from: raw, key: "MaxCapacity")
+        let curCap = remainingCap > 0 ? remainingCap : extractInt(from: raw, key: "CurrentCapacity")
         let isCharging = raw.contains("\"IsCharging\" = Yes")
         let tempRaw = extractInt(from: raw, key: "Temperature")
         let voltage = extractInt(from: raw, key: "Voltage")
         
-        let health = desCap > 0 ? min(Double(maxCap) / Double(desCap) * 100, 100) : 100
+        let health = desCap > 0 && maxCap > 0 ? min(Double(maxCap) / Double(desCap) * 100, 100) : 0
         let temp = Double(tempRaw) / 100.0
         
         let condition: String
@@ -108,7 +144,9 @@ class MacDiagService: ObservableObject {
         else if health >= 60 { condition = "Зношений" }
         else { condition = "Потребує заміни" }
         
+        let powerState = Shell.run("pmset -g batt")
         let timeStr = Shell.run("pmset -g batt | grep -o '[0-9]*:[0-9]*'")
+        let isFullyCharged = powerState.localizedCaseInsensitiveContains("charged")
         
         DispatchQueue.main.async { [weak self] in
             self?.battery = BatteryData(
@@ -118,10 +156,12 @@ class MacDiagService: ObservableObject {
                 maxCapacity: maxCap,
                 designCapacity: desCap,
                 currentCharge: curCap,
+                chargePercent: min(max(Double(reportedChargePercent), 0), 100),
                 isCharging: isCharging,
                 temperature: temp,
+                temperatureAvailable: tempRaw > 0,
                 condition: condition,
-                timeRemaining: timeStr.isEmpty ? (isCharging ? "Заряджається" : "—") : timeStr,
+                timeRemaining: timeStr.isEmpty ? (isCharging ? "Заряджається" : (isFullyCharged ? "Повністю заряджено" : "—")) : timeStr,
                 voltage: Double(voltage) / 1000.0
             )
         }
@@ -229,41 +269,42 @@ class MacDiagService: ObservableObject {
         }
     }
     
-    // MARK: - Network (Fixed Wi-Fi!)
+    // MARK: - Network
     
     private func fetchNetwork() {
-        let interface = Shell.defaultNetworkInterface().notEmpty ?? "en0"
+        let wifi = CWWiFiClient.shared().interface()
+        let interface = wifi?.interfaceName ?? Shell.defaultNetworkInterface().notEmpty ?? "en0"
+        let ssid = wifi?.ssid()
+        let signal = wifi.map { Int($0.rssiValue()) } ?? 0
+        let channel = wifi?.wlanChannel()?.channelNumber ?? 0
+        let linkSpeed = wifi.map { String(format: "%.0f Mbps", $0.transmitRate()) } ?? "—"
+        let bssid = wifi?.bssid() ?? "—"
 
-        // airport може бути відсутнім у нових версіях macOS, тому є кілька fallback-ів.
-        var ssid = Shell.run("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | grep ' SSID' | awk -F': ' '{print $2}'")
-        if ssid.isEmpty {
-            ssid = Shell.run("networksetup -getairportnetwork \(interface) 2>/dev/null | awk -F': ' '{print $2}'")
-        }
-        if ssid.isEmpty {
-            ssid = Shell.run("ipconfig getsummary \(interface) 2>/dev/null | grep '  SSID' | awk -F': ' '{print $2}'")
-        }
-        
-        let signal = Shell.run("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | grep 'agrCtlRSSI' | awk -F': ' '{print $2}'")
-        let channel = Shell.run("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | grep ' channel' | awk -F': ' '{print $2}'")
-        let linkSpeed = Shell.run("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | grep 'lastTxRate' | awk -F': ' '{print $2}'")
-        
         let localIP = Shell.run("ipconfig getifaddr \(interface) 2>/dev/null")
         let mac = Shell.run("ifconfig \(interface) 2>/dev/null | grep 'ether' | awk '{print $2}'")
-        let wifiOn = !Shell.run("networksetup -getairportpower \(interface) 2>/dev/null | grep 'On'").isEmpty
+        let wifiOn = wifi?.powerOn() ?? false
         let bt = Shell.run("system_profiler SPBluetoothDataType 2>/dev/null | grep 'Bluetooth Core Spec' | awk -F': ' '{print $2}'")
+        let accessMessage: String?
+        if wifi != nil && ssid == nil {
+            accessMessage = "Щоб показати назву мережі, дозвольте MacHealth доступ до геолокації в Системних параметрах."
+        } else {
+            accessMessage = nil
+        }
         
         DispatchQueue.main.async { [weak self] in
             self?.network = NetworkData(
-                wifiSSID: ssid.isEmpty ? "Не визначено" : ssid,
-                wifiSignal: Int(signal) ?? 0,
-                wifiChannel: Int(channel.components(separatedBy: ",").first ?? "") ?? 0,
-                wifiSpeed: linkSpeed.isEmpty ? "—" : "\(linkSpeed) Mbps",
+                wifiSSID: ssid ?? (wifiOn ? "Не визначено" : "Wi-Fi вимкнено"),
+                wifiSignal: signal,
+                wifiChannel: channel,
+                wifiSpeed: linkSpeed,
+                wifiBSSID: bssid,
                 localIP: localIP.isEmpty ? "—" : localIP,
                 externalIP: "—",
                 macAddress: mac.orDash,
                 isWifiOn: wifiOn,
                 bluetoothVersion: bt.orDash,
-                interfaceName: interface
+                interfaceName: interface,
+                wifiAccessMessage: accessMessage
             )
         }
     }

@@ -31,7 +31,10 @@ class ReportService {
         Здоров'я:        \(mac.battery.healthDisplay)
         Стан:            \(mac.battery.condition)
         Цикли:           \(mac.battery.cycleCount)
-        Температура:     \(mac.battery.temperature.formattedTemp)
+        Повна ємність:   \(mac.battery.maxCapacity) mAh
+        Заводська:       \(mac.battery.designCapacity) mAh
+        Поточний заряд:  \(mac.battery.currentCharge) mAh (\(mac.battery.chargeDisplay))
+        Температура:     \(mac.battery.temperatureDisplay)
         Напруга:         \(String(format: "%.2f В", mac.battery.voltage))
         Зарядка:         \(mac.battery.isCharging ? "Так" : "Ні")
         
@@ -70,9 +73,10 @@ class ReportService {
          🌐 МЕРЕЖА
         ═══════════════════════════════════════════════════════
         Wi-Fi:           \(mac.network.wifiSSID)
-        Сигнал:          \(mac.network.wifiSignal) dBm
-        Канал:           \(mac.network.wifiChannel)
+        Сигнал:          \(mac.network.signalDisplay)
+        Канал:           \(mac.network.channelDisplay)
         Швидкість:       \(mac.network.wifiSpeed)
+        Точка доступу:   \(mac.network.wifiBSSID)
         IP:              \(mac.network.localIP)
         MAC:             \(mac.network.macAddress)
         
