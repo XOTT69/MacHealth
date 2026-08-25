@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HardwareTestsView: View {
     @ObservedObject var service: HardwareTestService
+    @State private var showTestConfirmation = false
     
     var body: some View {
         ScrollView {
@@ -10,7 +11,7 @@ struct HardwareTestsView: View {
                     Text("Hardware тести")
                         .font(.largeTitle.bold())
                     Spacer()
-                    Button(action: { service.runAllTests() }) {
+                    Button(action: { showTestConfirmation = true }) {
                         Label(service.isRunning ? "Виконується..." : "Запустити всі тести", systemImage: "play.fill")
                             .font(.headline)
                     }
@@ -79,5 +80,11 @@ struct HardwareTestsView: View {
             .padding(24)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .alert("Запустити апаратні тести?", isPresented: $showTestConfirmation) {
+            Button("Скасувати", role: .cancel) {}
+            Button("Запустити") { service.runAllTests() }
+        } message: {
+            Text("Тест короткочасно запише 128 МБ у тимчасову теку й виконає мережеві запити. Дані користувача не змінюються.")
+        }
     }
 }

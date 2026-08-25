@@ -101,7 +101,8 @@ class ReportService {
             Серійний №:      \(p.phone.serialNumber)
             IMEI:            \(p.phone.imei)
             iOS:             \(p.phone.iosVersion)
-            Батарея:         \(p.phone.batteryLevel)%
+            Заряд:            \(p.phone.batteryLevel.map { "\($0)%" } ?? "Недоступно")
+            Здоров'я батареї: \(p.phone.batteryHealthDisplay)
             Пам'ять:         \(p.phone.totalStorage)
             Вільно:          \(p.phone.freeStorage)
             Активація:       \(p.phone.activationStatus)

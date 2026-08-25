@@ -12,17 +12,7 @@ let package = Package(
             path: "MacHealth",
             exclude: [
                 "Assets.xcassets",
-                "MacHealth.entitlements",
-                "MacHealthApp.swift",
-                "Helpers",
-                "Models/DeviceInfo.swift",
-                "Services/MacDiagnosticService.swift",
-                "Services/ReportGenerator.swift",
-                "Services/iPhoneDiagnosticService.swift",
-                "Views/ContentView.swift",
-                "Views/MacDiagnosticsView.swift",
-                "Views/iPhoneDiagnosticsView.swift",
-                "Views/ReportView.swift"
+                "MacHealth.entitlements"
             ],
             sources: [
                 "App/MacHealthApp.swift",

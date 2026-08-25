@@ -140,20 +140,26 @@ struct iPhoneMainView: View {
                     Label("Батарея та пам'ять", systemImage: "battery.75percent")
                         .font(.headline)
                     Divider()
-                    if service.phone.batteryLevel > 0 {
-                        InfoRow(label: "Заряд", value: "\(service.phone.batteryLevel)%")
+                    if let batteryLevel = service.phone.batteryLevel {
+                        InfoRow(label: "Заряд", value: "\(batteryLevel)%")
                     }
-                    InfoRow(label: "Здоров'я", value: "\(service.phone.batteryHealth)%")
+                    InfoRow(label: "Здоров'я", value: service.phone.batteryHealthDisplay)
                     InfoRow(label: "Всього", value: service.phone.totalStorage)
                     InfoRow(label: "Вільно", value: service.phone.freeStorage)
                     
-                    Divider()
-                    HStack {
-                        Image(systemName: service.phone.batteryLevel_health.icon)
-                            .foregroundStyle(Color.statusColor(service.phone.batteryLevel_health))
-                        Text(service.phone.batteryLevel_health.rawValue)
-                            .font(.caption.bold())
-                            .foregroundStyle(Color.statusColor(service.phone.batteryLevel_health))
+                    if let healthLevel = service.phone.batteryHealthLevel {
+                        Divider()
+                        HStack {
+                            Image(systemName: healthLevel.icon)
+                                .foregroundStyle(Color.statusColor(healthLevel))
+                            Text(healthLevel.rawValue)
+                                .font(.caption.bold())
+                                .foregroundStyle(Color.statusColor(healthLevel))
+                        }
+                    } else {
+                        Text("iOS не надає Maximum Capacity через стандартне USB-з’єднання.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .cardStyle()

@@ -15,7 +15,7 @@ class HardwareTestService: ObservableObject {
             self?.testDiskRead()
             self?.testNetworkLatency()
             self?.testDNSSpeed()
-            self?.testMemoryBandwidth()
+            self?.checkMemoryAvailability()
             
             DispatchQueue.main.async {
                 self?.isRunning = false
@@ -145,30 +145,24 @@ class HardwareTestService: ObservableObject {
         ))
     }
     
-    private func testMemoryBandwidth() {
-        updateStatus("Тест пам'яті...")
-        
-        let memGB = Double(Shell.sysctl("hw.memsize")) ?? 0
-        let totalGB = memGB / 1_073_741_824
-        
-        // Простий тест - виділення та запис в пам'ять
-        let start = Date()
-        Shell.run("dd if=/dev/zero bs=1m count=128 2>/dev/null | md5 > /dev/null 2>&1")
-        let elapsed = Date().timeIntervalSince(start)
-        let bandwidth = elapsed > 0 ? 128.0 / elapsed : 0
-        
+    private func checkMemoryAvailability() {
+        updateStatus("Перевірка доступної пам'яті...")
+
+        let output = Shell.run("memory_pressure -Q 2>/dev/null")
+        let freePercent = extractPercent(from: output)
+
         let level: HealthLevel
-        if bandwidth > 5000 { level = .excellent }
-        else if bandwidth > 2000 { level = .good }
-        else if bandwidth > 500 { level = .warning }
+        if freePercent >= 30 { level = .excellent }
+        else if freePercent >= 20 { level = .good }
+        else if freePercent >= 10 { level = .warning }
         else { level = .critical }
-        
+
         addResult(HardwareTestResult(
-            testName: "🧠 Пропускна здатність RAM",
-            result: bandwidth > 0 ? String(format: "%.0f МБ/с", bandwidth) : "—",
-            value: bandwidth,
-            unit: "МБ/с",
-            level: bandwidth > 0 ? level : .unknown
+            testName: "🧠 Доступна системна пам'ять",
+            result: freePercent >= 0 ? "\(freePercent)% доступно" : "Не вдалося отримати дані",
+            value: Double(max(freePercent, 0)),
+            unit: "%",
+            level: freePercent >= 0 ? level : .unknown
         ))
     }
     
@@ -188,5 +182,13 @@ class HardwareTestService: ObservableObject {
         URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("machealth-\(name)-\(UUID().uuidString)")
             .path
+    }
+
+    private func extractPercent(from text: String) -> Int {
+        let pattern = "System-wide memory free percentage:\\s*(\\d+)%"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let range = Range(match.range(at: 1), in: text) else { return -1 }
+        return Int(text[range]) ?? -1
     }
 }

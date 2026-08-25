@@ -10,14 +10,22 @@ struct PhoneData {
     var buildVersion: String = "—"
     var wifiMAC: String = "—"
     var bluetoothMAC: String = "—"
-    var batteryLevel: Int = 0
-    var batteryHealth: Int = 100
+    /// Поточний заряд, якщо його віддав авторизований iOS-пристрій.
+    var batteryLevel: Int? = nil
+    /// Maximum Capacity не входить до стандартного протоколу iOS. Не підставляємо 100%.
+    var batteryHealth: Int? = nil
     var totalStorage: String = "—"
     var freeStorage: String = "—"
     var activationStatus: String = "—"
     var isConnected: Bool = false
     
-    var batteryLevel_health: HealthLevel {
+    var batteryHealthDisplay: String {
+        guard let batteryHealth else { return "Недоступно" }
+        return "\(batteryHealth)%"
+    }
+
+    var batteryHealthLevel: HealthLevel? {
+        guard let batteryHealth else { return nil }
         if batteryHealth >= 85 { return .excellent }
         else if batteryHealth >= 70 { return .good }
         else if batteryHealth >= 50 { return .warning }

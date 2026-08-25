@@ -100,6 +100,8 @@ brew install libimobiledevice
 - libimobiledevice (iPhone)
 - GitHub Actions (автоматична збірка)
 
+Деталі структури та принципів достовірності даних — у [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ---
 
 ## 📄 Ліцензія
