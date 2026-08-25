@@ -1,6 +1,29 @@
 import Foundation
 
+enum DeviceTrustState: String {
+    case trusted = "Довіру підтверджено"
+    case needsTrust = "Потрібне підтвердження довіри"
+    case unavailable = "Не перевірено"
+
+    var icon: String {
+        switch self {
+        case .trusted: return "checkmark.shield.fill"
+        case .needsTrust: return "lock.trianglebadge.exclamationmark"
+        case .unavailable: return "questionmark.shield"
+        }
+    }
+
+    var level: HealthLevel {
+        switch self {
+        case .trusted: return .excellent
+        case .needsTrust: return .warning
+        case .unavailable: return .unknown
+        }
+    }
+}
+
 struct PhoneData {
+    var deviceID: String = "—"
     var deviceName: String = "—"
     var modelName: String = "—"
     var productType: String = "—"
@@ -18,6 +41,8 @@ struct PhoneData {
     var freeStorage: String = "—"
     var activationStatus: String = "—"
     var isConnected: Bool = false
+    var trustState: DeviceTrustState = .unavailable
+    var connection: String = "USB"
     
     var batteryHealthDisplay: String {
         guard let batteryHealth else { return "Недоступно" }

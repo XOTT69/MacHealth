@@ -1,7 +1,9 @@
 import SwiftUI
+import AppKit
 
 struct iPhoneMainView: View {
     @ObservedObject var service: iPhoneService
+    @State private var showBackupConfirmation = false
     
     var body: some View {
         ScrollView {
@@ -164,6 +166,88 @@ struct iPhoneMainView: View {
                 }
                 .cardStyle()
             }
+
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Доступ і можливості", systemImage: "checkmark.shield")
+                    .font(.headline)
+                Divider()
+                HStack(spacing: 8) {
+                    Image(systemName: service.phone.trustState.icon)
+                        .foregroundStyle(Color.statusColor(service.phone.trustState.level))
+                    Text(service.phone.trustState.rawValue)
+                        .font(.subheadline.weight(.medium))
+                    Spacer()
+                    Text(service.phone.connection)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if service.phone.deviceID != "—" {
+                    HStack {
+                        Text("UDID")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(service.phone.deviceID)
+                            .font(.system(.caption, design: .monospaced))
+                            .textSelection(.enabled)
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(service.phone.deviceID, forType: .string)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Копіювати UDID")
+                    }
+                }
+                HStack(spacing: 12) {
+                    CapabilityPill(title: "Дані пристрою", available: service.phone.trustState == .trusted)
+                    CapabilityPill(title: "Локальний бекап", available: service.canCreateBackup)
+                    CapabilityPill(title: "Файловий обмін", available: service.phone.trustState == .trusted)
+                }
+                HStack {
+                    Button {
+                        showBackupConfirmation = true
+                    } label: {
+                        Label(service.isBackingUp ? "Створення бекапу…" : "Створити локальний бекап", systemImage: "externaldrive.badge.plus")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!service.canCreateBackup || service.isBackingUp)
+
+                    if service.isBackingUp {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+                if let backupStatus = service.backupStatus {
+                    Text(backupStatus)
+                        .font(.caption)
+                        .foregroundStyle(service.isBackingUp ? .secondary : .primary)
+                }
+                Text("Файловий обмін доступний лише для застосунків iOS, які підтримують Apple File Sharing. Дані не надсилаються у хмару.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .cardStyle()
         }
+        .alert("Створити локальний бекап?", isPresented: $showBackupConfirmation) {
+            Button("Скасувати", role: .cancel) {}
+            Button("Обрати папку й продовжити") { service.chooseBackupDestination() }
+        } message: {
+            Text("На iPhone може з’явитися запит на пароль бекапу. Оберіть папку з достатнім вільним місцем і не від’єднуйте пристрій до завершення.")
+        }
+    }
+}
+
+private struct CapabilityPill: View {
+    let title: String
+    let available: Bool
+
+    var body: some View {
+        Label(title, systemImage: available ? "checkmark.circle.fill" : "minus.circle")
+            .font(.caption)
+            .foregroundStyle(available ? .green : .secondary)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(Capsule().fill((available ? Color.green : Color.gray).opacity(0.1)))
     }
 }
