@@ -215,19 +215,28 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
     private func fetchRAM() {
         let totalBytes = Double(Shell.sysctl("hw.memsize")) ?? 0
         let totalGB = totalBytes / 1_073_741_824
-        
-        let vmStat = Shell.run("vm_stat")
-        let pageSize = parsePageSize(from: vmStat)
-        
-        var active: Double = 0, wired: Double = 0, compressed: Double = 0
-        for line in vmStat.components(separatedBy: "\n") {
-            if line.contains("Pages active") { active = parseVMPages(line) }
-            else if line.contains("Pages wired") { wired = parseVMPages(line) }
-            else if line.contains("Pages occupied by compressor") { compressed = parseVMPages(line) }
+
+        // memory_pressure — системна оцінка доступної пам'яті, що включає
+        // reclaimable/purgeable сторінки. Не додаємо compressed pages до active
+        // та wired: це подвійно завищує використання на сучасних macOS.
+        let pressure = Shell.run("memory_pressure -Q 2>/dev/null")
+        let freePercent = extractMemoryFreePercent(from: pressure)
+        let freeGB: Double
+        let usedGB: Double
+        if freePercent >= 0 {
+            freeGB = totalGB * Double(freePercent) / 100
+            usedGB = max(totalGB - freeGB, 0)
+        } else {
+            let vmStat = Shell.run("vm_stat")
+            let pageSize = parsePageSize(from: vmStat)
+            var active: Double = 0, wired: Double = 0
+            for line in vmStat.components(separatedBy: "\n") {
+                if line.contains("Pages active") { active = parseVMPages(line) }
+                else if line.contains("Pages wired") { wired = parseVMPages(line) }
+            }
+            usedGB = min((active + wired) * pageSize / 1_073_741_824, totalGB)
+            freeGB = max(totalGB - usedGB, 0)
         }
-        
-        let usedGB = (active + wired + compressed) * pageSize / 1_073_741_824
-        let freeGB = max(totalGB - usedGB, 0)
         
         let memType = Shell.run("system_profiler SPMemoryDataType 2>/dev/null | grep 'Type:' | head -1 | awk -F': ' '{print $2}'")
         
@@ -367,5 +376,13 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
               let range = Range(match.range(at: 1), in: vmStat),
               let pageSize = Double(vmStat[range]) else { return 16_384 }
         return pageSize
+    }
+
+    private func extractMemoryFreePercent(from text: String) -> Int {
+        let pattern = "System-wide memory free percentage:\\s*(\\d+)%"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let range = Range(match.range(at: 1), in: text) else { return -1 }
+        return Int(text[range]) ?? -1
     }
 }

@@ -57,7 +57,7 @@ class ReportService {
         ═══════════════════════════════════════════════════════
         Всього:          \(mac.ram.totalGB.formattedGB)
         Використано:     \(mac.ram.usedGB.formattedGB) (\(mac.ram.usagePercent.formattedPercent))
-        Вільно:          \(mac.ram.freeGB.formattedGB)
+        Доступно:        \(mac.ram.freeGB.formattedGB)
         Тип:             \(mac.ram.type)
         
         ═══════════════════════════════════════════════════════

@@ -67,7 +67,7 @@ struct MacOverviewView: View {
                     HStack(spacing: 16) {
                         InfoRow(label: "Всього", value: mac.ram.totalGB.formattedGB)
                         InfoRow(label: "Використано", value: mac.ram.usedGB.formattedGB)
-                        InfoRow(label: "Вільно", value: mac.ram.freeGB.formattedGB)
+                        InfoRow(label: "Доступно", value: mac.ram.freeGB.formattedGB)
                         InfoRow(label: "Тип", value: mac.ram.type)
                     }
                 }

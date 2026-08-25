@@ -11,7 +11,7 @@ struct DashboardView: View {
 
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                     MetricTile(title: "Процесор", value: mac.cpu.usage.formattedPercent, detail: mac.cpu.name, icon: "cpu", level: mac.cpu.level)
-                    MetricTile(title: "Пам'ять", value: mac.ram.usagePercent.formattedPercent, detail: "\(mac.ram.usedGB.formattedGB) з \(mac.ram.totalGB.formattedGB)", icon: "memorychip", level: mac.ram.level)
+                    MetricTile(title: "Пам'ять", value: mac.ram.usagePercent.formattedPercent, detail: "\(mac.ram.freeGB.formattedGB) доступно", icon: "memorychip", level: mac.ram.level)
                     MetricTile(title: "Сховище", value: mac.storage.usagePercent.formattedPercent, detail: "\(mac.storage.freeGB.formattedGB) вільно", icon: "internaldrive", level: mac.storage.level)
                     MetricTile(title: "Батарея", value: mac.battery.healthDisplay, detail: mac.battery.isPresent ? "\(mac.battery.cycleCount) циклів • \(mac.battery.chargeDisplay) заряд" : mac.battery.condition, icon: "battery.75percent", level: mac.battery.level)
                 }

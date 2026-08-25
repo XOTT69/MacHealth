@@ -15,6 +15,7 @@ final class iPhoneService: ObservableObject {
     private var backupProcess: Process?
 
     private let requiredTools = ["idevice_id", "ideviceinfo", "idevicepair"]
+    private let backupRootsKey = "MacHealth.backupRoots"
 
     var missingTools: [String] {
         requiredTools.filter { !availableTools.contains($0) }
@@ -54,6 +55,7 @@ final class iPhoneService: ObservableObject {
             .appendingPathComponent(formatter.string(from: Date()), isDirectory: true)
 
         do {
+            rememberBackupRoot(rootURL)
             try FileManager.default.createDirectory(at: backupURL, withIntermediateDirectories: true)
             let process = Process()
             process.executableURL = URL(fileURLWithPath: executable)
@@ -111,6 +113,7 @@ final class iPhoneService: ObservableObject {
         if deviceID.isEmpty {
             DispatchQueue.main.async { [weak self] in
                 self?.phone.isConnected = false
+                self?.backups = []
                 self?.errorMessage = "iPhone не знайдено. Підключіть через USB та натисніть «Довіряти»."
                 self?.isLoading = false
             }
@@ -155,6 +158,7 @@ final class iPhoneService: ObservableObject {
                 trustState: trustState,
                 connection: "USB / libimobiledevice"
             )
+            self?.loadBackups(for: deviceID)
             if trustState == .needsTrust {
                 self?.errorMessage = "Розблокуйте пристрій і натисніть «Довіряти» — детальні дані та бекапи стануть доступними після pairing."
             }
@@ -169,6 +173,7 @@ final class iPhoneService: ObservableObject {
         if !hasPhone {
             DispatchQueue.main.async { [weak self] in
                 self?.phone.isConnected = false
+                self?.backups = []
                 self?.errorMessage = "iPhone не виявлено через USB.\n\nДля повної діагностики встановіть:\nbrew install libimobiledevice"
                 self?.isLoading = false
             }
@@ -205,6 +210,49 @@ final class iPhoneService: ObservableObject {
         guard toolPath(for: "idevicepair") != nil else { return .unavailable }
         let status = Shell.run("\(tool("idevicepair")) -u \(deviceID) validate >/dev/null 2>&1; echo $?")
         return status == "0" ? .trusted : .needsTrust
+    }
+
+    /// Скануються лише папки, які користувач обрав сам, і тільки в структурі MacHealth для цього UDID.
+    private func loadBackups(for deviceID: String) {
+        guard Self.isValidDeviceID(deviceID) else {
+            backups = []
+            return
+        }
+
+        let fileManager = FileManager.default
+        let keys: Set<URLResourceKey> = [.isDirectoryKey, .creationDateKey, .contentModificationDateKey]
+        let found = rememberedBackupRoots().flatMap { rootURL -> [LocalDeviceBackup] in
+            let deviceFolder = rootURL
+                .appendingPathComponent("MacHealth Backups", isDirectory: true)
+                .appendingPathComponent(deviceID, isDirectory: true)
+            guard let folders = try? fileManager.contentsOfDirectory(
+                at: deviceFolder,
+                includingPropertiesForKeys: Array(keys),
+                options: [.skipsHiddenFiles]
+            ) else { return [] }
+
+            return folders.compactMap { url in
+                guard let values = try? url.resourceValues(forKeys: keys), values.isDirectory == true else { return nil }
+                return LocalDeviceBackup(url: url, createdAt: values.creationDate ?? values.contentModificationDate ?? .distantPast)
+            }
+        }
+
+        backups = found.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func rememberBackupRoot(_ rootURL: URL) {
+        let path = rootURL.standardizedFileURL.path
+        var paths = UserDefaults.standard.stringArray(forKey: backupRootsKey) ?? []
+        if !paths.contains(path) {
+            paths.append(path)
+            UserDefaults.standard.set(paths, forKey: backupRootsKey)
+        }
+    }
+
+    private func rememberedBackupRoots() -> [URL] {
+        (UserDefaults.standard.stringArray(forKey: backupRootsKey) ?? []).map {
+            URL(fileURLWithPath: $0, isDirectory: true)
+        }
     }
 
     private func toolPath(for tool: String) -> String? {
