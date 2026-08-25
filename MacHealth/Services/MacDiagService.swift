@@ -14,6 +14,7 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
     @Published var display = DisplayData()
     @Published var isLoading = false
     @Published var overallHealth: HealthLevel = .excellent
+    @Published var lastUpdated: Date?
     
     private var timer: Timer?
     private var monitoringTick = 0
@@ -65,6 +66,7 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
             
             DispatchQueue.main.async {
                 self?.calculateOverallHealth()
+                self?.lastUpdated = Date()
                 self?.isLoading = false
             }
         }
@@ -203,7 +205,7 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
             self?.gpu = GPUData(
                 name: gpuName.isEmpty ? "Інтегрована" : gpuName,
                 cores: Int(coresStr) ?? 0,
-                metal: metal.isEmpty ? "Підтримується" : metal
+                metal: metal.isEmpty ? "Недоступно" : metal
             )
         }
     }
@@ -262,9 +264,9 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
                 totalGB: total,
                 usedGB: used,
                 freeGB: free,
-                type: diskType.isEmpty ? "SSD" : diskType,
-                fileSystem: fs.isEmpty ? "APFS" : fs,
-                smartStatus: smart.isEmpty ? "Verified" : smart
+                type: diskType.orDash,
+                fileSystem: fs.orDash,
+                smartStatus: smart.isEmpty ? "Недоступно" : smart
             )
         }
     }
@@ -329,7 +331,11 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
     // MARK: - Overall Health
     
     private func calculateOverallHealth() {
-        let levels = [battery.level, cpu.level, ram.level, storage.level]
+        let levels = [battery.level, cpu.level, ram.level, storage.level].filter { $0 != .unknown }
+        guard !levels.isEmpty else {
+            overallHealth = .unknown
+            return
+        }
         if levels.contains(.critical) { overallHealth = .critical }
         else if levels.contains(.warning) { overallHealth = .warning }
         else if levels.contains(.good) { overallHealth = .good }

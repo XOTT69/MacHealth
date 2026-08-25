@@ -6,136 +6,157 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Header
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Панель керування")
-                            .font(.largeTitle.bold())
-                        Text(mac.systemInfo.modelName + " • " + mac.systemInfo.osVersion)
+                dashboardHeader
+                healthHero
+
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                    MetricTile(title: "Процесор", value: mac.cpu.usage.formattedPercent, detail: mac.cpu.name, icon: "cpu", level: mac.cpu.level)
+                    MetricTile(title: "Пам'ять", value: mac.ram.usagePercent.formattedPercent, detail: "\(mac.ram.usedGB.formattedGB) з \(mac.ram.totalGB.formattedGB)", icon: "memorychip", level: mac.ram.level)
+                    MetricTile(title: "Сховище", value: mac.storage.usagePercent.formattedPercent, detail: "\(mac.storage.freeGB.formattedGB) вільно", icon: "internaldrive", level: mac.storage.level)
+                    MetricTile(title: "Батарея", value: mac.battery.healthDisplay, detail: mac.battery.isPresent ? "\(mac.battery.cycleCount) циклів • \(mac.battery.chargeDisplay) заряд" : mac.battery.condition, icon: "battery.75percent", level: mac.battery.level)
+                }
+
+                HStack(alignment: .top, spacing: 16) {
+                    DashboardDetailCard(title: "З'єднання", icon: "wifi") {
+                        InfoRow(label: "Wi‑Fi", value: mac.network.wifiSSID)
+                        InfoRow(label: "Сигнал", value: mac.network.signalDisplay)
+                        InfoRow(label: "Швидкість", value: mac.network.wifiSpeed)
+                        InfoRow(label: "IP", value: mac.network.localIP)
+                    }
+
+                    DashboardDetailCard(title: "Система", icon: "desktopcomputer") {
+                        InfoRow(label: "Чіп", value: mac.systemInfo.chip)
+                        InfoRow(label: "Дисплей", value: mac.display.resolution)
+                        InfoRow(label: "GPU", value: mac.gpu.name)
+                        InfoRow(label: "Час роботи", value: mac.systemInfo.uptime)
+                    }
+                }
+
+                DashboardDetailCard(title: "Стан батареї", icon: "battery.100percent") {
+                    if mac.battery.isPresent {
+                        ProgressBarSimple(value: mac.battery.healthPercent / 100, level: mac.battery.level)
+                            .padding(.bottom, 6)
+                        InfoRow(label: "Здоров'я", value: mac.battery.healthDisplay)
+                        InfoRow(label: "Ємність", value: "\(mac.battery.maxCapacity) / \(mac.battery.designCapacity) mAh")
+                        InfoRow(label: "Статус", value: mac.battery.condition)
+                        InfoRow(label: "Час", value: mac.battery.timeRemaining)
+                    } else {
+                        Text("Вбудовану батарею не виявлено.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    Spacer()
-                    Button(action: { mac.fetchAll() }) {
-                        Label("Оновити", systemImage: "arrow.clockwise")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                
-                // Overall Health
-                HStack(spacing: 16) {
-                    Image(systemName: mac.overallHealth.icon)
-                        .font(.system(size: 44))
-                        .foregroundStyle(Color.statusColor(mac.overallHealth))
-                    VStack(alignment: .leading) {
-                        Text("Загальний стан")
-                            .font(.headline)
-                        Text(mac.overallHealth.rawValue)
-                            .font(.title2.bold())
-                            .foregroundStyle(Color.statusColor(mac.overallHealth))
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing) {
-                        Text(mac.systemInfo.chip)
-                            .font(.caption)
-                        Text(mac.systemInfo.memory)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .sectionCard()
-                
-                // Quick Stats Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    QuickStatCard(title: "CPU", value: mac.cpu.usage.formattedPercent, icon: "cpu", level: mac.cpu.level)
-                    QuickStatCard(title: "RAM", value: mac.ram.usagePercent.formattedPercent, icon: "memorychip", level: mac.ram.level)
-                    QuickStatCard(title: "Диск", value: mac.storage.usagePercent.formattedPercent, icon: "internaldrive", level: mac.storage.level)
-                    QuickStatCard(title: "Батарея", value: mac.battery.healthDisplay, icon: "battery.75percent", level: mac.battery.level)
-                }
-                
-                // Details Row
-                HStack(spacing: 16) {
-                    // Network Card
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Мережа", systemImage: "wifi")
-                            .font(.headline)
-                        Divider()
-                        InfoRow(label: "Wi-Fi", value: mac.network.wifiSSID)
-                        InfoRow(label: "IP", value: mac.network.localIP)
-                        InfoRow(label: "Сигнал", value: mac.network.signalDisplay)
-                        InfoRow(label: "Швидкість", value: mac.network.wifiSpeed)
-                    }
-                    .cardStyle()
-                    
-                    // System Card
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Система", systemImage: "desktopcomputer")
-                            .font(.headline)
-                        Divider()
-                        InfoRow(label: "Серійний №", value: mac.systemInfo.serialNumber)
-                        InfoRow(label: "Uptime", value: mac.systemInfo.uptime)
-                        InfoRow(label: "Дисплей", value: mac.display.resolution)
-                        InfoRow(label: "GPU", value: mac.gpu.name)
-                    }
-                    .cardStyle()
-                }
-                
-                // Battery + Storage Row
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Батарея", systemImage: "battery.75percent")
-                            .font(.headline)
-                        Divider()
-                        ProgressBarSimple(value: mac.battery.healthPercent / 100, level: mac.battery.level)
-                        InfoRow(label: "Здоров'я", value: mac.battery.healthDisplay)
-                        InfoRow(label: "Цикли", value: "\(mac.battery.cycleCount)")
-                        InfoRow(label: "Стан", value: mac.battery.condition)
-                        InfoRow(label: "Температура", value: mac.battery.temperatureDisplay)
-                    }
-                    .cardStyle()
-                    
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Сховище", systemImage: "internaldrive")
-                            .font(.headline)
-                        Divider()
-                        ProgressBarSimple(value: mac.storage.usagePercent / 100, level: mac.storage.level)
-                        InfoRow(label: "Використано", value: "\(mac.storage.usedGB.formattedGB) / \(mac.storage.totalGB.formattedGB)")
-                        InfoRow(label: "Вільно", value: mac.storage.freeGB.formattedGB)
-                        InfoRow(label: "SMART", value: mac.storage.smartStatus)
-                        InfoRow(label: "Тип", value: mac.storage.type)
-                    }
-                    .cardStyle()
                 }
             }
-            .padding(24)
+            .padding(28)
+            .frame(maxWidth: 1120)
+            .frame(maxWidth: .infinity)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
+    }
+
+    private var dashboardHeader: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("MacHealth")
+                    .font(.title.bold())
+                Text(mac.systemInfo.modelName == "—" ? "Збір даних про систему" : mac.systemInfo.modelName)
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                if let lastUpdated = mac.lastUpdated {
+                    Label("Оновлено \(lastUpdated, style: .relative) тому", systemImage: "clock")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            Spacer()
+            Button(action: { mac.fetchAll() }) {
+                Label(mac.isLoading ? "Оновлення…" : "Оновити", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(mac.isLoading)
+        }
+    }
+
+    private var healthHero: some View {
+        HStack(spacing: 18) {
+            Image(systemName: mac.overallHealth.icon)
+                .font(.system(size: 42, weight: .semibold))
+                .foregroundStyle(Color.statusColor(mac.overallHealth))
+                .frame(width: 72, height: 72)
+                .background(Circle().fill(Color.statusColor(mac.overallHealth).opacity(0.12)))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Загальний стан")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text(mac.overallHealth.rawValue)
+                    .font(.title2.bold())
+                    .foregroundStyle(Color.statusColor(mac.overallHealth))
+                Text("Оцінка сформована з доступних показників CPU, пам’яті, сховища та батареї.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(20)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(.background))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.statusColor(mac.overallHealth).opacity(0.22), lineWidth: 1))
+        .shadow(color: .black.opacity(0.04), radius: 14, y: 5)
     }
 }
 
 // MARK: - Components
 
-struct QuickStatCard: View {
+struct MetricTile: View {
     let title: String
     let value: String
+    let detail: String
     let icon: String
     let level: HealthLevel
-    
+
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundStyle(Color.statusColor(level))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundStyle(Color.statusColor(level))
+                    .frame(width: 30, height: 30)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color.statusColor(level).opacity(0.12)))
+                Spacer()
+                Image(systemName: level.icon)
+                    .font(.caption)
+                    .foregroundStyle(Color.statusColor(level))
+            }
             Text(value)
-                .font(.title3.bold())
+                .font(.title2.bold())
             Text(title)
+                .font(.subheadline.weight(.medium))
+            Text(detail)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
-        .padding(12)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.statusColor(level).opacity(0.05)))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.statusColor(level).opacity(0.2), lineWidth: 1))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.background))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.gray.opacity(0.12), lineWidth: 1))
+    }
+}
+
+struct DashboardDetailCard<Content: View>: View {
+    let title: String
+    let icon: String
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+            Divider()
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.background))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.gray.opacity(0.12), lineWidth: 1))
     }
 }
 

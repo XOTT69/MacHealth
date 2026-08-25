@@ -92,9 +92,9 @@ struct StorageData {
     var totalGB: Double = 0
     var usedGB: Double = 0
     var freeGB: Double = 0
-    var type: String = "SSD"
-    var fileSystem: String = "APFS"
-    var smartStatus: String = "Verified"
+    var type: String = "—"
+    var fileSystem: String = "—"
+    var smartStatus: String = "Недоступно"
     
     var usagePercent: Double {
         totalGB > 0 ? (usedGB / totalGB) * 100 : 0
