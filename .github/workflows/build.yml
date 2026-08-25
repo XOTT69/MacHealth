@@ -1,0 +1,69 @@
+name: Build MacHealth
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-14
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+    
+    - name: Build
+      run: |
+        xcodebuild -project MacHealth.xcodeproj \
+          -scheme MacHealth \
+          -configuration Release \
+          -derivedDataPath build \
+          CODE_SIGN_IDENTITY="-" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          ENABLE_APP_SANDBOX=NO \
+          build
+    
+    - name: Create ZIP
+      run: |
+        cd build/Build/Products/Release
+        zip -r ../../../../MacHealth.zip MacHealth.app
+        cd ../../../..
+    
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: MacHealth
+        path: MacHealth.zip
+    
+    - name: Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: MacHealth.zip
+        name: "MacHealth ${{ github.ref_name }}"
+        body: |
+          ## 🏥 MacHealth ${{ github.ref_name }}
+          
+          Безкоштовна програма діагностики MacBook та iPhone.
+          
+          ### 📥 Як встановити:
+          1. Завантажте `MacHealth.zip`
+          2. Розпакуйте архів
+          3. Перемістіть `MacHealth.app` в папку "Програми"
+          4. При першому запуску: натисніть правою кнопкою → "Відкрити"
+          5. Або виконайте в Терміналі: `xattr -cr /Applications/MacHealth.app`
+          
+          ### 🆕 Що нового:
+          - Повна діагностика MacBook (батарея, CPU, RAM, SSD, мережа, дисплей)
+          - Діагностика iPhone через USB
+          - Рекомендації по ремонту та обслуговуванню
+          - Генерація звітів
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
