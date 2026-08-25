@@ -22,6 +22,16 @@ enum DeviceTrustState: String {
     }
 }
 
+struct LocalDeviceBackup: Identifiable {
+    let id = UUID()
+    let url: URL
+    let createdAt: Date
+
+    var title: String {
+        createdAt.formatted(date: .abbreviated, time: .shortened)
+    }
+}
+
 struct PhoneData {
     var deviceID: String = "—"
     var deviceName: String = "—"

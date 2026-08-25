@@ -10,6 +10,7 @@ final class iPhoneService: ObservableObject {
     @Published var availableTools: Set<String> = []
     @Published var isBackingUp = false
     @Published var backupStatus: String?
+    @Published var backups: [LocalDeviceBackup] = []
 
     private var backupProcess: Process?
 
@@ -66,6 +67,9 @@ final class iPhoneService: ObservableObject {
                     self?.backupStatus = process.terminationStatus == 0
                         ? "Бекап створено: \(backupURL.lastPathComponent)"
                         : "Не вдалося створити бекап. Переконайтеся, що iPhone розблокований і підтверджено довіру."
+                    if process.terminationStatus == 0 {
+                        self?.backups.insert(LocalDeviceBackup(url: backupURL, createdAt: Date()), at: 0)
+                    }
                 }
             }
             backupProcess = process

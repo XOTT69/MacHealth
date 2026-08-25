@@ -223,6 +223,23 @@ struct iPhoneMainView: View {
                         .font(.caption)
                         .foregroundStyle(service.isBackingUp ? .secondary : .primary)
                 }
+                if !service.backups.isEmpty {
+                    Divider()
+                    ForEach(service.backups) { backup in
+                        HStack {
+                            Image(systemName: "externaldrive.fill")
+                                .foregroundStyle(.blue)
+                            Text("Бекап • \(backup.title)")
+                                .font(.caption)
+                            Spacer()
+                            Button("Показати у Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([backup.url])
+                            }
+                            .buttonStyle(.link)
+                            .font(.caption)
+                        }
+                    }
+                }
                 Text("Файловий обмін доступний лише для застосунків iOS, які підтримують Apple File Sharing. Дані не надсилаються у хмару.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -233,7 +250,7 @@ struct iPhoneMainView: View {
             Button("Скасувати", role: .cancel) {}
             Button("Обрати папку й продовжити") { service.chooseBackupDestination() }
         } message: {
-            Text("На iPhone може з’явитися запит на пароль бекапу. Оберіть папку з достатнім вільним місцем і не від’єднуйте пристрій до завершення.")
+            Text("Оберіть папку з достатнім вільним місцем і не від’єднуйте пристрій до завершення. Бекап залишається лише на вашому Mac; для захищених бекапів потрібен пароль пристрою/бекапу.")
         }
     }
 }
