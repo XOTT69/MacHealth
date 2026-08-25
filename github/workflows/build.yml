@@ -31,17 +31,18 @@ jobs:
           ENABLE_APP_SANDBOX=NO \
           build
     
-    - name: Create ZIP
-      run: |
-        cd build/Build/Products/Release
-        zip -r ../../../../MacHealth.zip MacHealth.app
-        cd ../../../..
-    
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MacHealth
-        path: MacHealth.zip
+        # GitHub сам створює ZIP для artifacts. Завантажуємо .app напряму,
+        # щоб уникнути ZIP усередині ZIP.
+        name: MacHealth-macOS
+        path: build/Build/Products/Release/MacHealth.app
+
+    - name: Create release ZIP
+      if: startsWith(github.ref, 'refs/tags/v')
+      working-directory: build/Build/Products/Release
+      run: zip -r "$GITHUB_WORKSPACE/MacHealth.zip" MacHealth.app
     
     - name: Release
       if: startsWith(github.ref, 'refs/tags/v')
