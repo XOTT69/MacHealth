@@ -68,6 +68,18 @@ xattr -cr /Applications/MacHealth.app
 
 Або: ПКМ на програмі → «Відкрити» → «Відкрити»
 
+### Розробка та збірка з вихідного коду
+
+Потрібен повний **Xcode 15.4 або новіший** (самих Command Line Tools недостатньо для SwiftUI-макросів).
+
+```bash
+git clone https://github.com/XOTT69/MacHealth.git
+cd MacHealth
+open MacHealth.xcodeproj
+```
+
+У Xcode виберіть схему `MacHealth` і натисніть **Run**. У CI застосунок збирається автоматично після push у `main` або за тегом `v*`.
+
 ### 📱 Для iPhone діагностики
 
 ```bash

@@ -11,7 +11,7 @@ struct NetworkToolsView: View {
                 Text("Мережа")
                     .font(.largeTitle.bold())
                     .frame(maxWidth: .infinity, alignment: .leading)
-                
+
                 // Wi-Fi Info
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Wi-Fi з'єднання", systemImage: "wifi")
@@ -143,12 +143,12 @@ struct SpeedTestView: View {
                         VStack {
                             Text("⬆️")
                                 .font(.title)
-                            Text(String(format: "%.1f", network.speedTest.uploadMbps))
+                            Text(network.speedTest.uploadMbps > 0 ? String(format: "%.1f", network.speedTest.uploadMbps) : "—")
                                 .font(.title.bold())
                             Text("Мбіт/с")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            Text("Вивантаження")
+                            Text("Вивантаження*")
                                 .font(.caption2)
                         }
                         .cardStyle()
@@ -166,6 +166,11 @@ struct SpeedTestView: View {
                         }
                         .cardStyle()
                     }
+                }
+                if network.speedTest.progress >= 1.0 && network.speedTest.uploadMbps == 0 {
+                    Text("* Для точного upload-тесту потрібен спеціальний сервер; застосунок не показує штучну оцінку.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(24)

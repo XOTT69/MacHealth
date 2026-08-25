@@ -117,7 +117,7 @@ struct BatteryDetailView: View {
                             .stroke(Color.statusColor(mac.battery.level), style: StrokeStyle(lineWidth: 12, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                         VStack {
-                            Text(mac.battery.healthPercent.formattedPercent)
+                            Text(mac.battery.healthDisplay)
                                 .font(.title.bold())
                             Text("Здоров'я")
                                 .font(.caption)
@@ -149,7 +149,7 @@ struct BatteryDetailView: View {
                     InfoRow(label: "Поточна максимальна", value: "\(mac.battery.maxCapacity) mAh")
                     InfoRow(label: "Заводська", value: "\(mac.battery.designCapacity) mAh")
                     InfoRow(label: "Поточний заряд", value: "\(mac.battery.currentCharge) mAh")
-                    InfoRow(label: "Втрачено", value: "\(mac.battery.designCapacity - mac.battery.maxCapacity) mAh")
+                        InfoRow(label: "Втрачено", value: mac.battery.isPresent ? "\(max(0, mac.battery.designCapacity - mac.battery.maxCapacity)) mAh" : "—")
                 }
                 .sectionCard()
                 
@@ -158,7 +158,11 @@ struct BatteryDetailView: View {
                     Label("Рекомендації", systemImage: "wrench.and.screwdriver")
                         .font(.headline)
                     Divider()
-                    if mac.battery.healthPercent < 80 {
+                    if !mac.battery.isPresent {
+                        Text("На цьому Mac вбудовану батарею не виявлено.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else if mac.battery.healthPercent < 80 {
                         HStack {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)

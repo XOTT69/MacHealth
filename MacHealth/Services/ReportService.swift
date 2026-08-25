@@ -28,7 +28,7 @@ class ReportService {
         ═══════════════════════════════════════════════════════
          🔋 БАТАРЕЯ
         ═══════════════════════════════════════════════════════
-        Здоров'я:        \(mac.battery.healthPercent.formattedPercent)
+        Здоров'я:        \(mac.battery.healthDisplay)
         Стан:            \(mac.battery.condition)
         Цикли:           \(mac.battery.cycleCount)
         Температура:     \(mac.battery.temperature.formattedTemp)

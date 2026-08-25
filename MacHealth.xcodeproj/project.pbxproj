@@ -6,12 +6,59 @@
 	objectVersion = 56;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B001 /* MacHealthApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = S001 /* MacHealthApp.swift */; };
+		B002 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = S002 /* Extensions.swift */; };
+		B003 /* Shell.swift in Sources */ = {isa = PBXBuildFile; fileRef = S003 /* Shell.swift */; };
+		B004 /* CommonModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = S004 /* CommonModels.swift */; };
+		B005 /* MacModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = S005 /* MacModels.swift */; };
+		B006 /* iPhoneModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = S006 /* iPhoneModels.swift */; };
+		B007 /* NetworkModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = S007 /* NetworkModels.swift */; };
+		B008 /* MacDiagService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S008 /* MacDiagService.swift */; };
+		B009 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S009 /* NetworkService.swift */; };
+		B010 /* iPhoneService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S010 /* iPhoneService.swift */; };
+		B011 /* USBMonitorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S011 /* USBMonitorService.swift */; };
+		B012 /* HardwareTestService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S012 /* HardwareTestService.swift */; };
+		B013 /* ReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = S013 /* ReportService.swift */; };
+		B014 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S014 /* MainView.swift */; };
+		B015 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S015 /* DashboardView.swift */; };
+		B016 /* MacOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S016 /* MacOverviewView.swift */; };
+		B017 /* NetworkToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S017 /* NetworkToolsView.swift */; };
+		B018 /* USBMonitorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S018 /* USBMonitorView.swift */; };
+		B019 /* HardwareTestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S019 /* HardwareTestsView.swift */; };
+		B020 /* iPhoneMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S020 /* iPhoneMainView.swift */; };
+		B021 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = S021 /* ReportView.swift */; };
+		B022 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = S022 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXGroup section */
 		ROOT = {
 			isa = PBXGroup;
 			children = (
 				SRC /* MacHealth */,
 				PRODUCTS /* Products */,
+				S001 /* MacHealthApp.swift */,
+				S002 /* Extensions.swift */,
+				S003 /* Shell.swift */,
+				S004 /* CommonModels.swift */,
+				S005 /* MacModels.swift */,
+				S006 /* iPhoneModels.swift */,
+				S007 /* NetworkModels.swift */,
+				S008 /* MacDiagService.swift */,
+				S009 /* NetworkService.swift */,
+				S010 /* iPhoneService.swift */,
+				S011 /* USBMonitorService.swift */,
+				S012 /* HardwareTestService.swift */,
+				S013 /* ReportService.swift */,
+				S014 /* MainView.swift */,
+				S015 /* DashboardView.swift */,
+				S016 /* MacOverviewView.swift */,
+				S017 /* NetworkToolsView.swift */,
+				S018 /* USBMonitorView.swift */,
+				S019 /* HardwareTestsView.swift */,
+				S020 /* iPhoneMainView.swift */,
+				S021 /* ReportView.swift */,
+				S022 /* Assets.xcassets */,
 			);
 			sourceTree = "<group>";
 		};
@@ -34,6 +81,28 @@
 
 /* Begin PBXFileReference section */
 		APP /* MacHealth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacHealth.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		S001 /* MacHealthApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/App/MacHealthApp.swift; sourceTree = "<group>"; };
+		S002 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Core/Extensions.swift; sourceTree = "<group>"; };
+		S003 /* Shell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Core/Shell.swift; sourceTree = "<group>"; };
+		S004 /* CommonModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Models/CommonModels.swift; sourceTree = "<group>"; };
+		S005 /* MacModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Models/MacModels.swift; sourceTree = "<group>"; };
+		S006 /* iPhoneModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Models/iPhoneModels.swift; sourceTree = "<group>"; };
+		S007 /* NetworkModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Models/NetworkModels.swift; sourceTree = "<group>"; };
+		S008 /* MacDiagService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Services/MacDiagService.swift; sourceTree = "<group>"; };
+		S009 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Services/NetworkService.swift; sourceTree = "<group>"; };
+		S010 /* iPhoneService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Services/iPhoneService.swift; sourceTree = "<group>"; };
+		S011 /* USBMonitorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Services/USBMonitorService.swift; sourceTree = "<group>"; };
+		S012 /* HardwareTestService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Services/HardwareTestService.swift; sourceTree = "<group>"; };
+		S013 /* ReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Services/ReportService.swift; sourceTree = "<group>"; };
+		S014 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/Sidebar/MainView.swift; sourceTree = "<group>"; };
+		S015 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/Dashboard/DashboardView.swift; sourceTree = "<group>"; };
+		S016 /* MacOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/Mac/MacOverviewView.swift; sourceTree = "<group>"; };
+		S017 /* NetworkToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/Network/NetworkToolsView.swift; sourceTree = "<group>"; };
+		S018 /* USBMonitorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/USB/USBMonitorView.swift; sourceTree = "<group>"; };
+		S019 /* HardwareTestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/Tests/HardwareTestsView.swift; sourceTree = "<group>"; };
+		S020 /* iPhoneMainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/iPhone/iPhoneMainView.swift; sourceTree = "<group>"; };
+		S021 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacHealth/Views/Report/ReportView.swift; sourceTree = "<group>"; };
+		S022 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = MacHealth/Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,7 +162,9 @@
 		RES1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+				B022 /* Assets.xcassets in Resources */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
@@ -102,7 +173,9 @@
 		SOURCES1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
+			files = (
+				B001 /* MacHealthApp.swift in Sources */, B002 /* Extensions.swift in Sources */, B003 /* Shell.swift in Sources */, B004 /* CommonModels.swift in Sources */, B005 /* MacModels.swift in Sources */, B006 /* iPhoneModels.swift in Sources */, B007 /* NetworkModels.swift in Sources */, B008 /* MacDiagService.swift in Sources */, B009 /* NetworkService.swift in Sources */, B010 /* iPhoneService.swift in Sources */, B011 /* USBMonitorService.swift in Sources */, B012 /* HardwareTestService.swift in Sources */, B013 /* ReportService.swift in Sources */, B014 /* MainView.swift in Sources */, B015 /* DashboardView.swift in Sources */, B016 /* MacOverviewView.swift in Sources */, B017 /* NetworkToolsView.swift in Sources */, B018 /* USBMonitorView.swift in Sources */, B019 /* HardwareTestsView.swift in Sources */, B020 /* iPhoneMainView.swift in Sources */, B021 /* ReportView.swift in Sources */,
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */

@@ -50,7 +50,7 @@ struct DashboardView: View {
                     QuickStatCard(title: "CPU", value: mac.cpu.usage.formattedPercent, icon: "cpu", level: mac.cpu.level)
                     QuickStatCard(title: "RAM", value: mac.ram.usagePercent.formattedPercent, icon: "memorychip", level: mac.ram.level)
                     QuickStatCard(title: "Диск", value: mac.storage.usagePercent.formattedPercent, icon: "internaldrive", level: mac.storage.level)
-                    QuickStatCard(title: "Батарея", value: mac.battery.healthPercent.formattedPercent, icon: "battery.75percent", level: mac.battery.level)
+                    QuickStatCard(title: "Батарея", value: mac.battery.healthDisplay, icon: "battery.75percent", level: mac.battery.level)
                 }
                 
                 // Details Row
@@ -87,7 +87,7 @@ struct DashboardView: View {
                             .font(.headline)
                         Divider()
                         ProgressBarSimple(value: mac.battery.healthPercent / 100, level: mac.battery.level)
-                        InfoRow(label: "Здоров'я", value: mac.battery.healthPercent.formattedPercent)
+                        InfoRow(label: "Здоров'я", value: mac.battery.healthDisplay)
                         InfoRow(label: "Цикли", value: "\(mac.battery.cycleCount)")
                         InfoRow(label: "Стан", value: mac.battery.condition)
                         InfoRow(label: "Температура", value: mac.battery.temperature.formattedTemp)

@@ -11,14 +11,20 @@ class NetworkService: ObservableObject {
     // MARK: - Ping
     
     func ping(host: String, count: Int = 5) {
+        let normalizedHost = host.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard Self.isValidHost(normalizedHost) else {
+            pingResults = [PingResult(host: normalizedHost, time: -1, ttl: 0, isSuccess: false)]
+            return
+        }
+
         isPinging = true
         pingResults = []
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             for i in 0..<count {
-                let output = Shell.run("ping -c 1 -t 5 \(host) 2>/dev/null")
+                let output = Shell.run("ping -c 1 -t 5 \(normalizedHost) 2>/dev/null")
                 
-                var result = PingResult(host: host)
+                var result = PingResult(host: normalizedHost)
                 
                 if output.contains("time=") {
                     // Парсимо час відповіді
@@ -76,22 +82,19 @@ class NetworkService: ObservableObject {
             }
             
             // Download speed - завантажуємо тестовий файл
-            let startTime = Date()
-            let _ = Shell.run("curl -s -o /dev/null -w '%{speed_download}' http://speedtest.tele2.net/10MB.zip 2>/dev/null")
-            let elapsed = Date().timeIntervalSince(startTime)
-            let downloadMbps = elapsed > 0 ? (10.0 * 8.0) / elapsed : 0 // 10MB файл
+            let rawSpeed = Shell.run("curl -L --max-time 30 -s -o /dev/null -w '%{speed_download}' 'https://speed.cloudflare.com/__down?bytes=10000000' 2>/dev/null")
+            let downloadMbps = (Double(rawSpeed) ?? 0) * 8 / 1_000_000
             
             DispatchQueue.main.async {
                 self?.speedTest.downloadMbps = downloadMbps
                 self?.speedTest.progress = 0.7
-                self?.speedTest.status = "Вимірювання вивантаження..."
+                self?.speedTest.status = "Завершення тесту..."
             }
             
-            // Upload estimation (спрощений - вимірюємо через ping)
-            let uploadMbps = downloadMbps * 0.3 // приблизна оцінка
-            
             DispatchQueue.main.async {
-                self?.speedTest.uploadMbps = uploadMbps
+                // Не показуємо вигадану "оцінку" upload: для неї потрібен сервер,
+                // який приймає тестові дані та не спотворює вимірювання.
+                self?.speedTest.uploadMbps = 0
                 self?.speedTest.progress = 1.0
                 self?.speedTest.status = "Завершено"
                 self?.speedTest.isRunning = false
@@ -107,7 +110,8 @@ class NetworkService: ObservableObject {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             // Отримуємо підмережу
-            let localIP = Shell.run("ipconfig getifaddr en0 2>/dev/null")
+            let interface = Shell.defaultNetworkInterface().notEmpty ?? "en0"
+            let localIP = Shell.run("ipconfig getifaddr \(interface) 2>/dev/null")
             guard !localIP.isEmpty else {
                 DispatchQueue.main.async {
                     self?.isScanning = false
@@ -117,9 +121,9 @@ class NetworkService: ObservableObject {
             
             let subnet = localIP.components(separatedBy: ".").prefix(3).joined(separator: ".")
             
-            // ARP scan
-            let _ = Shell.run("ping -c 1 -t 1 \(subnet).255 2>/dev/null")
-            Thread.sleep(forTimeInterval: 1)
+            // Заповнюємо ARP-кеш короткими паралельними ping по підмережі.
+            // subnet отримується з локальної IPv4-адреси, тому не містить введення користувача.
+            let _ = Shell.run("seq 1 254 | xargs -P 24 -I{} ping -c 1 -W 100 \(subnet).{} >/dev/null 2>&1")
             
             let arpOutput = Shell.run("arp -a 2>/dev/null")
             var devices: [LocalDevice] = []
@@ -171,6 +175,13 @@ class NetworkService: ObservableObject {
             DispatchQueue.main.async {
                 completion(ip.orDash)
             }
+        }
+    }
+
+    private static func isValidHost(_ value: String) -> Bool {
+        guard !value.isEmpty, value.count <= 253 else { return false }
+        return value.unicodeScalars.allSatisfy {
+            CharacterSet.alphanumerics.contains($0) || $0 == "." || $0 == "-" || $0 == ":"
         }
     }
 }

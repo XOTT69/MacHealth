@@ -16,6 +16,7 @@ class MacDiagService: ObservableObject {
     private var timer: Timer?
     
     func startMonitoring() {
+        stopMonitoring()
         fetchAll()
         timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             self?.fetchLiveData()
@@ -83,6 +84,13 @@ class MacDiagService: ObservableObject {
     
     private func fetchBattery() {
         let raw = Shell.run("ioreg -r -c AppleSmartBattery")
+
+        guard !raw.isEmpty else {
+            DispatchQueue.main.async { [weak self] in
+                self?.battery = BatteryData(isPresent: false, condition: "Батарея не виявлена")
+            }
+            return
+        }
         
         let cycleCount = extractInt(from: raw, key: "CycleCount")
         let maxCap = extractInt(from: raw, key: "MaxCapacity")
@@ -104,6 +112,7 @@ class MacDiagService: ObservableObject {
         
         DispatchQueue.main.async { [weak self] in
             self?.battery = BatteryData(
+                isPresent: true,
                 healthPercent: health,
                 cycleCount: cycleCount,
                 maxCapacity: maxCap,
@@ -166,7 +175,7 @@ class MacDiagService: ObservableObject {
         let totalGB = totalBytes / 1_073_741_824
         
         let vmStat = Shell.run("vm_stat")
-        let pageSize: Double = 16384
+        let pageSize = parsePageSize(from: vmStat)
         
         var active: Double = 0, wired: Double = 0, compressed: Double = 0
         for line in vmStat.components(separatedBy: "\n") {
@@ -223,22 +232,24 @@ class MacDiagService: ObservableObject {
     // MARK: - Network (Fixed Wi-Fi!)
     
     private func fetchNetwork() {
-        // Правильний спосіб отримати SSID на сучасних macOS
+        let interface = Shell.defaultNetworkInterface().notEmpty ?? "en0"
+
+        // airport може бути відсутнім у нових версіях macOS, тому є кілька fallback-ів.
         var ssid = Shell.run("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | grep ' SSID' | awk -F': ' '{print $2}'")
         if ssid.isEmpty {
-            ssid = Shell.run("networksetup -getairportnetwork en0 2>/dev/null | awk -F': ' '{print $2}'")
+            ssid = Shell.run("networksetup -getairportnetwork \(interface) 2>/dev/null | awk -F': ' '{print $2}'")
         }
         if ssid.isEmpty {
-            ssid = Shell.run("ipconfig getsummary en0 2>/dev/null | grep '  SSID' | awk -F': ' '{print $2}'")
+            ssid = Shell.run("ipconfig getsummary \(interface) 2>/dev/null | grep '  SSID' | awk -F': ' '{print $2}'")
         }
         
         let signal = Shell.run("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | grep 'agrCtlRSSI' | awk -F': ' '{print $2}'")
         let channel = Shell.run("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | grep ' channel' | awk -F': ' '{print $2}'")
         let linkSpeed = Shell.run("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I 2>/dev/null | grep 'lastTxRate' | awk -F': ' '{print $2}'")
         
-        let localIP = Shell.run("ipconfig getifaddr en0 2>/dev/null")
-        let mac = Shell.run("ifconfig en0 2>/dev/null | grep 'ether' | awk '{print $2}'")
-        let wifiOn = !Shell.run("networksetup -getairportpower en0 2>/dev/null | grep 'On'").isEmpty
+        let localIP = Shell.run("ipconfig getifaddr \(interface) 2>/dev/null")
+        let mac = Shell.run("ifconfig \(interface) 2>/dev/null | grep 'ether' | awk '{print $2}'")
+        let wifiOn = !Shell.run("networksetup -getairportpower \(interface) 2>/dev/null | grep 'On'").isEmpty
         let bt = Shell.run("system_profiler SPBluetoothDataType 2>/dev/null | grep 'Bluetooth Core Spec' | awk -F': ' '{print $2}'")
         
         DispatchQueue.main.async { [weak self] in
@@ -252,7 +263,7 @@ class MacDiagService: ObservableObject {
                 macAddress: mac.orDash,
                 isWifiOn: wifiOn,
                 bluetoothVersion: bt.orDash,
-                interfaceName: "en0"
+                interfaceName: interface
             )
         }
     }
@@ -300,5 +311,14 @@ class MacDiagService: ObservableObject {
             .replacingOccurrences(of: ".", with: "")
             .filter { $0.isNumber } ?? "0"
         return Double(numStr) ?? 0
+    }
+
+    private func parsePageSize(from vmStat: String) -> Double {
+        let pattern = "page size of\\s+(\\d+)\\s+bytes"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: vmStat, range: NSRange(vmStat.startIndex..., in: vmStat)),
+              let range = Range(match.range(at: 1), in: vmStat),
+              let pageSize = Double(vmStat[range]) else { return 16_384 }
+        return pageSize
     }
 }

@@ -27,8 +27,9 @@ class HardwareTestService: ObservableObject {
     private func testDiskWrite() {
         updateStatus("Тест запису на диск...")
         
-        let output = Shell.run("dd if=/dev/zero of=/tmp/machealth_test bs=1m count=256 2>&1 | tail -1")
-        Shell.run("rm -f /tmp/machealth_test")
+        let path = temporaryTestPath(named: "write")
+        let output = Shell.run("dd if=/dev/zero of=\(path) bs=1m count=128 2>&1 | tail -1")
+        Shell.run("rm -f \(path)")
         
         var speed: Double = 0
         if output.contains("bytes/sec") || output.contains("MB/s") {
@@ -63,12 +64,13 @@ class HardwareTestService: ObservableObject {
     private func testDiskRead() {
         updateStatus("Тест читання з диска...")
         
-        // Створюємо тестовий файл
-        Shell.run("dd if=/dev/zero of=/tmp/machealth_read_test bs=1m count=256 2>/dev/null")
+        let path = temporaryTestPath(named: "read")
+        // Створюємо власний тимчасовий файл, не чіпаючи файли інших запусків.
+        Shell.run("dd if=/dev/zero of=\(path) bs=1m count=128 2>/dev/null")
         Shell.run("purge 2>/dev/null") // Очищаємо кеш
         
-        let output = Shell.run("dd if=/tmp/machealth_read_test of=/dev/null bs=1m 2>&1 | tail -1")
-        Shell.run("rm -f /tmp/machealth_read_test")
+        let output = Shell.run("dd if=\(path) of=/dev/null bs=1m 2>&1 | tail -1")
+        Shell.run("rm -f \(path)")
         
         var speed: Double = 0
         if let parenRange = output.range(of: "(") {
@@ -151,9 +153,9 @@ class HardwareTestService: ObservableObject {
         
         // Простий тест - виділення та запис в пам'ять
         let start = Date()
-        Shell.run("dd if=/dev/zero bs=1m count=512 2>/dev/null | md5 > /dev/null 2>&1")
+        Shell.run("dd if=/dev/zero bs=1m count=128 2>/dev/null | md5 > /dev/null 2>&1")
         let elapsed = Date().timeIntervalSince(start)
-        let bandwidth = elapsed > 0 ? 512.0 / elapsed : 0
+        let bandwidth = elapsed > 0 ? 128.0 / elapsed : 0
         
         let level: HealthLevel
         if bandwidth > 5000 { level = .excellent }
@@ -180,5 +182,11 @@ class HardwareTestService: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             self?.results.append(result)
         }
+    }
+
+    private func temporaryTestPath(named name: String) -> String {
+        URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("machealth-\(name)-\(UUID().uuidString)")
+            .path
     }
 }

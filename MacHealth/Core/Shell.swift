@@ -31,6 +31,11 @@ enum Shell {
     static func systemProfiler(_ dataType: String) -> String {
         run("system_profiler \(dataType) 2>/dev/null")
     }
+
+    /// Назва мережевого інтерфейсу маршруту за замовчуванням (не завжди `en0`).
+    static func defaultNetworkInterface() -> String {
+        run("route -n get default 2>/dev/null | awk '/interface:/{print $2; exit}'")
+    }
     
     static func grep(from text: String, pattern: String) -> String {
         let lines = text.components(separatedBy: "\n")

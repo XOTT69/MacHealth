@@ -11,7 +11,8 @@ struct MacSystemInfo {
 }
 
 struct BatteryData {
-    var healthPercent: Double = 100
+    var isPresent: Bool = false
+    var healthPercent: Double = 0
     var cycleCount: Int = 0
     var maxCapacity: Int = 0
     var designCapacity: Int = 0
@@ -23,10 +24,15 @@ struct BatteryData {
     var voltage: Double = 0
     
     var level: HealthLevel {
+        guard isPresent else { return .unknown }
         if healthPercent >= 85 { return .excellent }
         else if healthPercent >= 70 { return .good }
         else if healthPercent >= 50 { return .warning }
         else { return .critical }
+    }
+
+    var healthDisplay: String {
+        isPresent ? healthPercent.formattedPercent : "—"
     }
 }
 
