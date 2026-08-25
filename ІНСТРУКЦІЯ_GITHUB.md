@@ -1,44 +1,23 @@
-# 📋 Інструкція як залити на GitHub
+# 📋 Як залити на GitHub
 
-## Крок 1: Створити репозиторій на GitHub
-1. Зайди на https://github.com/new
-2. Назва: `MacHealth`
-3. Опис: `Безкоштовна діагностика MacBook та iPhone`
-4. Вибери **Public**
-5. **НЕ** ставь галочки на README, .gitignore, license
-6. Натисни **Create repository**
+## 1. Створити репозиторій
+- https://github.com/new
+- Назва: `MacHealth`
+- Public, без README/gitignore/license
 
-## Крок 2: Завантажити файли
-Коли завантажуєш файли на GitHub, потрібно:
+## 2. Завантажити файли
+Перетягни ВСІ файли з цієї папки на GitHub.
 
-### ⚠️ ВАЖЛИВО: Переіменування перед завантаженням
-Перед завантаженням на GitHub потрібно переіменувати:
-- Папку `github` → `.github` (додати крапку на початку)
-- Файл `gitignore.txt` → `.gitignore` (прибрати .txt та додати крапку)
+## 3. Після завантаження — переіменувати:
+- `github` → `.github` (через Edit файл на GitHub)
+- `gitignore.txt` → `.gitignore`
 
-**Це можна зробити прямо на GitHub** після завантаження через кнопку "Edit" на файлах.
+## 4. Налаштувати Actions:
+- Settings → Actions → General → Workflow permissions → "Read and write permissions" → Save
 
-### Або простіший спосіб — через Terminal:
-```bash
-cd ~/Desktop/MacHealth
-mv github .github
-mv gitignore.txt .gitignore
-git add -A
-git commit -m "Restore hidden files"
-git remote add origin https://github.com/ТВІЙ_ЮЗЕРНЕЙМ/MacHealth.git
-git branch -M main
-git push -u origin main
-```
+## 5. Створити Release:
+- Releases → Create new release
+- Tag: `v2.0.0`
+- Publish!
 
-## Крок 3: Створити Release
-1. На GitHub перейди в репозиторій
-2. Справа натисни **Releases** → **Create a new release**
-3. Tag: `v1.0.0`
-4. Title: `MacHealth v1.0.0`
-5. Натисни **Publish release**
-6. GitHub Actions автоматично збере ZIP і додасть до Release!
-
-## Крок 4: Перевірка
-- Перейди у вкладку **Actions** — побачиш процес збірки
-- Після завершення у **Releases** з'явиться `MacHealth.zip`
-- Цей ZIP можна скачати і відразу використовувати!
+GitHub Actions автоматично збере ZIP та додасть до Release.
