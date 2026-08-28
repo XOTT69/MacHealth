@@ -4,267 +4,419 @@ import AppKit
 struct iPhoneMainView: View {
     @ObservedObject var service: iPhoneService
     @State private var showBackupConfirmation = false
-    
+    @State private var backupToRestore: LocalDeviceBackup?
+    @State private var appToUninstall: ManagedApp?
+    @State private var showUpdateConfirmation = false
+    @State private var showEraseSheet = false
+    @State private var erasePhrase = ""
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                HStack {
-                    Text("Діагностика iPhone")
-                        .font(.largeTitle.bold())
-                    Spacer()
-                    Button(action: { service.checkAndConnect() }) {
-                        Label("Оновити", systemImage: "arrow.clockwise")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                
+                header
                 if service.isLoading {
-                    VStack(spacing: 12) {
-                        ProgressView()
-                            .scaleEffect(1.3)
-                        Text("Пошук iPhone...")
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 200)
+                    ProgressView("Пошук iPhone або iPad…")
+                        .frame(maxWidth: .infinity, minHeight: 260)
                 } else if !service.phone.isConnected {
                     notConnectedView
                 } else {
                     connectedView
                 }
             }
-            .padding(24)
+            .padding(28)
+            .frame(maxWidth: 1120)
+            .frame(maxWidth: .infinity)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
         .onAppear { service.checkAndConnect() }
-    }
-    
-    private var notConnectedView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "iphone.slash")
-                .font(.system(size: 56))
-                .foregroundStyle(.secondary)
-            
-            Text("iPhone не підключено")
-                .font(.title2.bold())
-            
-            if let error = service.errorMessage {
-                Text(error)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Підключіть iPhone через USB-кабель", systemImage: "1.circle.fill")
-                Label("Розблокуйте iPhone", systemImage: "2.circle.fill")
-                Label("Натисніть «Довіряти» на iPhone", systemImage: "3.circle.fill")
-                Label("Натисніть «Оновити» вище", systemImage: "4.circle.fill")
-            }
-            .font(.subheadline)
-            .padding(20)
-            .background(RoundedRectangle(cornerRadius: 12).fill(.blue.opacity(0.05)))
-            
-            if !service.hasLibimobiledevice {
-                VStack(spacing: 8) {
-                    Text("💡 Для повної діагностики:")
-                        .font(.headline)
-                    HStack {
-                        Text("brew install libimobiledevice")
-                            .font(.system(.body, design: .monospaced))
-                            .padding(8)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(.gray.opacity(0.1)))
-                        Button(action: {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString("brew install libimobiledevice", forType: .string)
-                        }) {
-                            Image(systemName: "doc.on.doc")
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-                .padding(16)
-                .background(RoundedRectangle(cornerRadius: 12).fill(.background))
-                .shadow(color: .black.opacity(0.05), radius: 4)
-            }
-        }
-        .frame(maxWidth: .infinity, minHeight: 400)
-    }
-    
-    private var connectedView: some View {
-        VStack(spacing: 16) {
-            // Status
-            HStack(spacing: 12) {
-                Image(systemName: "iphone")
-                    .font(.system(size: 32))
-                    .foregroundStyle(.green)
-                VStack(alignment: .leading) {
-                    Text(service.phone.deviceName)
-                        .font(.title3.bold())
-                    Text(service.phone.modelName)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Label("Підключено", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.subheadline.bold())
-            }
-            .sectionCard()
-            
-            if let error = service.errorMessage {
-                HStack {
-                    Image(systemName: "info.circle.fill")
-                        .foregroundStyle(.orange)
-                    Text(error)
-                        .font(.caption)
-                }
-                .padding(12)
-                .background(RoundedRectangle(cornerRadius: 8).fill(.orange.opacity(0.05)))
-            }
-            
-            // Info Cards
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Інформація", systemImage: "info.circle")
-                        .font(.headline)
-                    Divider()
-                    InfoRow(label: "Серійний №", value: service.phone.serialNumber)
-                    InfoRow(label: "IMEI", value: service.phone.imei)
-                    InfoRow(label: "iOS", value: service.phone.iosVersion)
-                    InfoRow(label: "Збірка", value: service.phone.buildVersion)
-                    InfoRow(label: "Wi-Fi MAC", value: service.phone.wifiMAC)
-                    InfoRow(label: "BT MAC", value: service.phone.bluetoothMAC)
-                    InfoRow(label: "Активація", value: service.phone.activationStatus)
-                }
-                .cardStyle()
-                
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Батарея та пам'ять", systemImage: "battery.75percent")
-                        .font(.headline)
-                    Divider()
-                    if let batteryLevel = service.phone.batteryLevel {
-                        InfoRow(label: "Заряд", value: "\(batteryLevel)%")
-                    }
-                    InfoRow(label: "Здоров'я", value: service.phone.batteryHealthDisplay)
-                    InfoRow(label: "Всього", value: service.phone.totalStorage)
-                    InfoRow(label: "Вільно", value: service.phone.freeStorage)
-                    
-                    if let healthLevel = service.phone.batteryHealthLevel {
-                        Divider()
-                        HStack {
-                            Image(systemName: healthLevel.icon)
-                                .foregroundStyle(Color.statusColor(healthLevel))
-                            Text(healthLevel.rawValue)
-                                .font(.caption.bold())
-                                .foregroundStyle(Color.statusColor(healthLevel))
-                        }
-                    } else {
-                        Text("iOS не надає Maximum Capacity через стандартне USB-з’єднання.")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .cardStyle()
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Доступ і можливості", systemImage: "checkmark.shield")
-                    .font(.headline)
-                Divider()
-                HStack(spacing: 8) {
-                    Image(systemName: service.phone.trustState.icon)
-                        .foregroundStyle(Color.statusColor(service.phone.trustState.level))
-                    Text(service.phone.trustState.rawValue)
-                        .font(.subheadline.weight(.medium))
-                    Spacer()
-                    Text(service.phone.connection)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                if service.phone.deviceID != "—" {
-                    HStack {
-                        Text("UDID")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(service.phone.deviceID)
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                        Button {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(service.phone.deviceID, forType: .string)
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Копіювати UDID")
-                    }
-                }
-                HStack(spacing: 12) {
-                    CapabilityPill(title: "Дані пристрою", available: service.phone.trustState == .trusted)
-                    CapabilityPill(title: "Локальний бекап", available: service.canCreateBackup)
-                    CapabilityPill(title: "Файловий обмін", available: service.phone.trustState == .trusted)
-                }
-                HStack {
-                    Button {
-                        showBackupConfirmation = true
-                    } label: {
-                        Label(service.isBackingUp ? "Створення бекапу…" : "Створити локальний бекап", systemImage: "externaldrive.badge.plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!service.canCreateBackup || service.isBackingUp)
-
-                    if service.isBackingUp {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-                }
-                if let backupStatus = service.backupStatus {
-                    Text(backupStatus)
-                        .font(.caption)
-                        .foregroundStyle(service.isBackingUp ? .secondary : .primary)
-                }
-                if !service.backups.isEmpty {
-                    Divider()
-                    ForEach(service.backups) { backup in
-                        HStack {
-                            Image(systemName: "externaldrive.fill")
-                                .foregroundStyle(.blue)
-                            Text("Бекап • \(backup.title)")
-                                .font(.caption)
-                            Spacer()
-                            Button("Показати у Finder") {
-                                NSWorkspace.shared.activateFileViewerSelecting([backup.url])
-                            }
-                            .buttonStyle(.link)
-                            .font(.caption)
-                        }
-                    }
-                }
-                Text("Файловий обмін доступний лише для застосунків iOS, які підтримують Apple File Sharing. Дані не надсилаються у хмару.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .cardStyle()
-        }
         .alert("Створити локальний бекап?", isPresented: $showBackupConfirmation) {
             Button("Скасувати", role: .cancel) {}
             Button("Обрати папку й продовжити") { service.chooseBackupDestination() }
         } message: {
-            Text("Оберіть папку з достатнім вільним місцем і не від’єднуйте пристрій до завершення. Бекап залишається лише на вашому Mac; для захищених бекапів потрібен пароль пристрою/бекапу.")
+            Text("Бекап зберігається тільки у вибраній вами папці на Mac. Не від’єднуйте пристрій до завершення.")
+        }
+        .alert("Відновити цей бекап?", isPresented: Binding(get: { backupToRestore != nil }, set: { if !$0 { backupToRestore = nil } })) {
+            Button("Скасувати", role: .cancel) { backupToRestore = nil }
+            Button("Відновити", role: .destructive) {
+                if let backupToRestore { service.restoreBackup(backupToRestore) }
+                backupToRestore = nil
+            }
+        } message: {
+            Text("Дані та налаштування на пристрої можуть бути замінені станом із бекапу. Переконайтеся, що обрано правильний пристрій і резервну копію.")
+        }
+        .alert("Видалити програму?", isPresented: Binding(get: { appToUninstall != nil }, set: { if !$0 { appToUninstall = nil } })) {
+            Button("Скасувати", role: .cancel) { appToUninstall = nil }
+            Button("Видалити", role: .destructive) {
+                if let appToUninstall { service.uninstallApp(appToUninstall) }
+                appToUninstall = nil
+            }
+        } message: {
+            Text("Буде видалено «\(appToUninstall?.name ?? "")» і її локальні дані на пристрої.")
+        }
+        .alert("Оновити iOS/iPadOS?", isPresented: $showUpdateConfirmation) {
+            Button("Скасувати", role: .cancel) {}
+            Button("Почати оновлення") { service.startFirmwareRestore(erasing: false) }
+        } message: {
+            Text("MacHealth використає перевірений локальний IPSW і спробує зберегти дані. Apple може вимагати підписану версію; створіть бекап перед продовженням.")
+        }
+        .sheet(isPresented: $showEraseSheet) {
+            eraseConfirmationSheet
         }
     }
-}
 
-private struct CapabilityPill: View {
-    let title: String
-    let available: Bool
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Device Hub")
+                    .font(.largeTitle.bold())
+                Text("Керування власним iPhone та iPad через локальне USB-з’єднання")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button { service.checkAndConnect() } label: {
+                Label("Оновити", systemImage: "arrow.clockwise")
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(service.isLoading || service.operation.isRunning)
+        }
+    }
 
-    var body: some View {
-        Label(title, systemImage: available ? "checkmark.circle.fill" : "minus.circle")
+    private var notConnectedView: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "iphone.slash")
+                .font(.system(size: 56))
+                .foregroundStyle(.secondary)
+            Text("Пристрій не готовий")
+                .font(.title2.bold())
+            Text(service.errorMessage ?? "Підключіть iPhone або iPad через USB.")
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Підключіть пристрій кабелем", systemImage: "1.circle.fill")
+                Label("Розблокуйте його", systemImage: "2.circle.fill")
+                Label("Натисніть «Довіряти»", systemImage: "3.circle.fill")
+                Label("Поверніться сюди та натисніть «Оновити»", systemImage: "4.circle.fill")
+            }
+            .font(.subheadline)
+            .padding(18)
+            .background(RoundedRectangle(cornerRadius: 14).fill(.blue.opacity(0.07)))
+
+            if !service.hasLibimobiledevice {
+                installHelp(command: "brew install libimobiledevice", title: "Базові дані та бекапи")
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 420)
+    }
+
+    private var connectedView: some View {
+        VStack(spacing: 16) {
+            deviceStatusCard
+            if let error = service.errorMessage { notice(error, color: .orange, icon: "exclamationmark.triangle.fill") }
+            deviceInformation
+            capabilityCard
+            backupsCard
+            applicationsCard
+            firmwareCard
+            operationCard
+        }
+    }
+
+    private var deviceStatusCard: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "iphone")
+                .font(.system(size: 34))
+                .foregroundStyle(.blue)
+                .frame(width: 58, height: 58)
+                .background(Circle().fill(.blue.opacity(0.12)))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(service.phone.deviceName).font(.title3.bold())
+                Text(service.phone.modelName).font(.subheadline).foregroundStyle(.secondary)
+                Text(service.phone.connection).font(.caption).foregroundStyle(.tertiary)
+            }
+            Spacer()
+            Label(service.phone.trustState.rawValue, systemImage: service.phone.trustState.icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.statusColor(service.phone.trustState.level))
+        }
+        .sectionCard()
+    }
+
+    private var deviceInformation: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Пристрій", systemImage: "info.circle").font(.headline)
+                Divider()
+                InfoRow(label: "Серійний №", value: service.phone.serialNumber)
+                InfoRow(label: "IMEI", value: service.phone.imei)
+                InfoRow(label: "iOS / iPadOS", value: service.phone.iosVersion)
+                InfoRow(label: "Збірка", value: service.phone.buildVersion)
+                InfoRow(label: "Активація", value: service.phone.activationStatus)
+                if service.phone.deviceID != "—" {
+                    HStack {
+                        Text("UDID").font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Text(service.phone.deviceID).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                        Button { copy(service.phone.deviceID) } label: { Image(systemName: "doc.on.doc") }
+                            .buttonStyle(.borderless)
+                    }
+                }
+            }
+            .cardStyle()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Батарея та сховище", systemImage: "battery.75percent").font(.headline)
+                Divider()
+                InfoRow(label: "Заряд", value: service.phone.batteryLevel.map { "\($0)%" } ?? "Недоступно")
+                InfoRow(label: "Maximum Capacity", value: service.phone.batteryHealthDisplay)
+                InfoRow(label: "Всього", value: service.phone.totalStorage)
+                InfoRow(label: "Вільно", value: service.phone.freeStorage)
+                Text("iOS не надає Maximum Capacity через стандартний USB-протокол; значення не підміняється.")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            .cardStyle()
+        }
+    }
+
+    private var capabilityCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Готовність інструментів", systemImage: "checkmark.shield").font(.headline)
+            Divider()
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                toolPill("Бекапи", tool: "idevicebackup2")
+                toolPill("Програми", tool: "ideviceinstaller")
+                toolPill("IPSW", tool: "idevicerestore")
+            }
+            if !service.hasLibimobiledevice {
+                installHelp(command: "brew install libimobiledevice", title: "Встановити базові інструменти")
+            }
+            Text("IPSW і керування програмами потребують додаткових сумісних утиліт. Наявність показана вище; MacHealth не завантажує та не запускає їх самостійно.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .cardStyle()
+    }
+
+    private var backupsCard: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack {
+                Label("Локальні бекапи", systemImage: "externaldrive.badge.plus").font(.headline)
+                Spacer()
+                Button { showBackupConfirmation = true } label: {
+                    Label("Створити", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!service.canCreateBackup || service.operation.isRunning)
+            }
+            Divider()
+            if let status = service.backupStatus { Text(status).font(.caption).foregroundStyle(.secondary) }
+            if service.backups.isEmpty {
+                Text("У вибраних папках ще немає бекапів для цього UDID.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                ForEach(service.backups) { backup in
+                    HStack {
+                        Image(systemName: "externaldrive.fill").foregroundStyle(.blue)
+                        VStack(alignment: .leading) {
+                            Text(backup.title).font(.subheadline.weight(.medium))
+                            Text(backup.url.path).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        Spacer()
+                        Button("Finder") { NSWorkspace.shared.activateFileViewerSelecting([backup.url]) }
+                            .buttonStyle(.borderless)
+                        Button("Відновити") { backupToRestore = backup }
+                            .buttonStyle(.bordered)
+                            .disabled(!service.canRestoreBackup || service.operation.isRunning)
+                    }
+                }
+            }
+            Text("Відновлення може замінити дані на пристрої. Перед ним створіть свіжий бекап.")
+                .font(.caption).foregroundStyle(.orange)
+        }
+        .cardStyle()
+    }
+
+    private var applicationsCard: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack {
+                Label("Програми", systemImage: "square.grid.2x2").font(.headline)
+                Spacer()
+                Button { service.refreshInstalledApps() } label: { Image(systemName: "arrow.clockwise") }
+                    .buttonStyle(.borderless)
+                    .disabled(!service.canManageApps || service.isLoadingApps || service.operation.isRunning)
+                Button { service.chooseIPAForInstallation() } label: { Label("Обрати IPA", systemImage: "square.and.arrow.down") }
+                    .buttonStyle(.bordered)
+                    .disabled(!service.canManageApps || service.operation.isRunning)
+            }
+            Divider()
+            if !service.canManageApps {
+                Text("Потрібен довірений пристрій і встановлений ideviceinstaller.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                if let ipa = service.selectedIPA {
+                    HStack {
+                        Image(systemName: "shippingbox").foregroundStyle(.blue)
+                        Text(ipa.lastPathComponent).lineLimit(1)
+                        Spacer()
+                        Button("Встановити") { service.installSelectedIPA() }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(service.operation.isRunning)
+                    }
+                }
+                if service.isLoadingApps {
+                    ProgressView("Читаємо список програм…")
+                } else if service.installedApps.isEmpty {
+                    Text("Список програм ще не отримано або пристрій не повернув user-apps.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                } else {
+                    ForEach(service.installedApps) { app in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(app.name).font(.subheadline.weight(.medium))
+                                Text("\(app.bundleIdentifier) • \(app.version)").font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button(role: .destructive) { appToUninstall = app } label: { Image(systemName: "trash") }
+                                .buttonStyle(.borderless)
+                                .disabled(service.operation.isRunning)
+                        }
+                    }
+                }
+                Text("Встановлюються тільки IPA з дійсним підписом для цього пристрою. MacHealth не підписує й не модифікує пакети.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .cardStyle()
+    }
+
+    private var firmwareCard: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack {
+                Label("Відновлення IPSW", systemImage: "arrow.triangle.2.circlepath").font(.headline)
+                Spacer()
+                Button { service.chooseIPSW() } label: { Label("Обрати IPSW", systemImage: "doc.zipper") }
+                    .buttonStyle(.bordered)
+                    .disabled(!service.availableTools.contains("idevicerestore") || service.operation.isRunning)
+            }
+            Divider()
+            if !service.availableTools.contains("idevicerestore") {
+                Text("idevicerestore не знайдено. Ця утиліта потрібна для роботи з офіційними IPSW.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                if let ipsw = service.selectedIPSW {
+                    VStack(alignment: .leading, spacing: 7) {
+                        Label(ipsw.isVerified ? "IPSW пройшов локальну перевірку" : "IPSW не пройшов перевірку", systemImage: ipsw.isVerified ? "checkmark.seal.fill" : "xmark.seal.fill")
+                            .foregroundStyle(ipsw.isVerified ? .green : .red)
+                        Text(ipsw.url.lastPathComponent).font(.subheadline.weight(.medium))
+                        Text(ipsw.summary).font(.caption2).foregroundStyle(.secondary).lineLimit(5).textSelection(.enabled)
+                    }
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(.gray.opacity(0.07)))
+                }
+                if let status = service.firmwareStatus { Text(status).font(.caption).foregroundStyle(.secondary) }
+                HStack {
+                    Button("Оновити без стирання") { showUpdateConfirmation = true }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!service.canRestoreFirmware || service.operation.isRunning)
+                    Button("Стерти й відновити", role: .destructive) { erasePhrase = ""; showEraseSheet = true }
+                        .buttonStyle(.bordered)
+                        .disabled(!service.canRestoreFirmware || service.operation.isRunning)
+                }
+                Text("Оновлення намагається зберегти дані, але це не гарантія. Повне відновлення безповоротно стирає дані. Використовуйте лише IPSW, який Apple підписує для моделі пристрою.")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+        }
+        .cardStyle()
+    }
+
+    @ViewBuilder
+    private var operationCard: some View {
+        if service.operation.kind != nil {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label(service.operation.kind?.rawValue ?? "Операція", systemImage: service.operation.kind?.icon ?? "terminal")
+                        .font(.headline)
+                    Spacer()
+                    if service.operation.isRunning {
+                        ProgressView().controlSize(.small)
+                        Button("Скасувати") { service.cancelCurrentOperation() }.buttonStyle(.bordered)
+                    } else if service.operation.hasResult {
+                        Label(service.operation.succeeded ? "Успішно" : "Потрібна перевірка", systemImage: service.operation.succeeded ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundStyle(service.operation.succeeded ? .green : .red)
+                            .font(.caption.bold())
+                    }
+                }
+                Text(service.operation.status).font(.subheadline).foregroundStyle(.secondary)
+                if !service.operation.log.isEmpty {
+                    Text(service.operation.log)
+                        .font(.system(.caption2, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxHeight: 180, alignment: .top)
+                        .padding(10)
+                        .background(RoundedRectangle(cornerRadius: 8).fill(.black.opacity(0.06)))
+                }
+            }
+            .cardStyle()
+        }
+    }
+
+    private var eraseConfirmationSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Повне відновлення IPSW", systemImage: "exclamationmark.triangle.fill")
+                .font(.title2.bold()).foregroundStyle(.red)
+            Text("Ця дія видалить усі дані з «\(service.phone.deviceName)». Переконайтеся, що у вас є актуальний бекап і пристрій підключений кабелем.")
+            Text("Введіть ERASE для підтвердження:").font(.subheadline.weight(.medium))
+            TextField("ERASE", text: $erasePhrase).textFieldStyle(.roundedBorder)
+            HStack {
+                Spacer()
+                Button("Скасувати") { showEraseSheet = false }
+                Button("Стерти й відновити", role: .destructive) {
+                    showEraseSheet = false
+                    service.startFirmwareRestore(erasing: true)
+                }
+                .disabled(erasePhrase != "ERASE")
+            }
+        }
+        .padding(26)
+        .frame(width: 480)
+    }
+
+    private func toolPill(_ title: String, tool: String) -> some View {
+        let available = service.availableTools.contains(tool)
+        return Label(title, systemImage: available ? "checkmark.circle.fill" : "minus.circle")
             .font(.caption)
             .foregroundStyle(available ? .green : .secondary)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 6)
-            .background(Capsule().fill((available ? Color.green : Color.gray).opacity(0.1)))
+            .padding(.horizontal, 9).padding(.vertical, 7)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 8).fill((available ? Color.green : Color.gray).opacity(0.09)))
+    }
+
+    private func installHelp(command: String, title: String) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(.caption.weight(.medium))
+                Text(command).font(.system(.caption, design: .monospaced))
+            }
+            Spacer()
+            Button { copy(command) } label: { Image(systemName: "doc.on.doc") }
+                .buttonStyle(.borderless)
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 9).fill(.gray.opacity(0.08)))
+    }
+
+    private func notice(_ text: String, color: Color, icon: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.subheadline)
+            .foregroundStyle(color)
+            .padding(13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 12).fill(color.opacity(0.08)))
+    }
+
+    private func copy(_ string: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(string, forType: .string)
     }
 }

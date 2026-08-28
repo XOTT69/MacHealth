@@ -32,6 +32,62 @@ struct LocalDeviceBackup: Identifiable {
     }
 }
 
+enum DeviceOperationKind: String, Identifiable {
+    case backup = "Створення бекапу"
+    case restoreBackup = "Відновлення бекапу"
+    case installApp = "Встановлення програми"
+    case uninstallApp = "Видалення програми"
+    case updateFirmware = "Оновлення iOS/iPadOS"
+    case eraseFirmware = "Повне відновлення IPSW"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .backup: return "externaldrive.badge.plus"
+        case .restoreBackup: return "arrow.counterclockwise"
+        case .installApp: return "square.and.arrow.down"
+        case .uninstallApp: return "trash"
+        case .updateFirmware: return "arrow.triangle.2.circlepath"
+        case .eraseFirmware: return "exclamationmark.triangle"
+        }
+    }
+
+    var isDestructive: Bool {
+        switch self {
+        case .restoreBackup, .uninstallApp, .eraseFirmware: return true
+        case .backup, .installApp, .updateFirmware: return false
+        }
+    }
+}
+
+struct DeviceOperationState {
+    var kind: DeviceOperationKind?
+    var isRunning = false
+    var status = "Готово"
+    var log = ""
+    var startedAt: Date?
+    var finishedAt: Date?
+    var exitCode: Int32?
+
+    var hasResult: Bool { finishedAt != nil }
+    var succeeded: Bool { exitCode == 0 }
+}
+
+struct ManagedApp: Identifiable, Hashable {
+    let bundleIdentifier: String
+    let name: String
+    let version: String
+
+    var id: String { bundleIdentifier }
+}
+
+struct IPSWSelection {
+    let url: URL
+    let isVerified: Bool
+    let summary: String
+}
+
 struct PhoneData {
     var deviceID: String = "—"
     var deviceName: String = "—"

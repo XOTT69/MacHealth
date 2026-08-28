@@ -31,6 +31,12 @@
 - Локальний бекап у папку, яку обирає користувач; історія бекапів зберігається локально
 - Підтримка через `libimobiledevice`; дані не надсилаються в хмару
 
+### 🧰 Device Hub
+- Перегляд user-apps і встановлення/видалення програм через `ideviceinstaller`
+- Встановлення лише коректно підписаних `.ipa`; MacHealth не обходить підписування iOS
+- Перевірка локального `.ipsw`, update зі збереженням даних або окреме повне erase-відновлення через `idevicerestore`
+- Потоковий журнал операцій, блокування паралельних дій і окремі підтвердження перед restore, uninstall та erase
+
 > iOS не надає «Maximum Capacity» батареї та повну файлову систему через стандартний USB-протокол. MacHealth чесно показує «Недоступно», а не вигадане значення.
 
 ### 🌐 Мережеві інструменти
@@ -92,6 +98,14 @@ open MacHealth.xcodeproj
 brew install libimobiledevice
 ```
 
+Для керування програмами потрібен окремо встановлений [ideviceinstaller](https://github.com/libimobiledevice/ideviceinstaller), а для IPSW — [idevicerestore](https://github.com/libimobiledevice/idevicerestore). Device Hub не завантажує ці утиліти автоматично і показує їхню готовність у застосунку.
+
+### ⚠️ Бекапи, програми та IPSW
+
+- Відновлення бекапу, видалення програми та повне IPSW-відновлення можуть змінити або стерти дані.
+- IPSW має бути офіційним і підписаним Apple для конкретної моделі; downgrade не гарантується.
+- `.ipa` можна встановити тільки з підписом, дійсним для підключеного пристрою. Обхід Activation Lock, MDM, паролів, Find My або підписування не підтримується.
+
 ---
 
 ## 🏗 Технології
@@ -102,7 +116,7 @@ brew install libimobiledevice
 - libimobiledevice (iPhone)
 - GitHub Actions (автоматична збірка)
 
-Деталі структури та принципів достовірності даних — у [ARCHITECTURE.md](ARCHITECTURE.md). Робочі критерії та поетапний план переробки — у [PRODUCT_SPEC.md](PRODUCT_SPEC.md).
+Деталі структури та принципів достовірності даних — у [ARCHITECTURE.md](ARCHITECTURE.md). Робочі критерії та поетапний план переробки — у [PRODUCT_SPEC.md](PRODUCT_SPEC.md), а специфікація Device Hub — у [DEVICE_HUB_SPEC.md](DEVICE_HUB_SPEC.md).
 
 ---
 
