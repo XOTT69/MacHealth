@@ -43,7 +43,7 @@ struct MacOverviewView: View {
                         ProgressBarSimple(value: mac.cpu.usage / 100, level: mac.cpu.level)
                         InfoRow(label: "Модель", value: mac.cpu.name)
                         InfoRow(label: "Ядра", value: "\(mac.cpu.cores) (P:\(mac.cpu.perfCores) E:\(mac.cpu.effCores))")
-                        InfoRow(label: "Навантаження", value: mac.cpu.usage.formattedPercent)
+                        InfoRow(label: "Навантаження", value: mac.cpu.usageDisplay)
                     }
                     .cardStyle()
                     
@@ -65,9 +65,9 @@ struct MacOverviewView: View {
                     Divider()
                     ProgressBarSimple(value: mac.ram.usagePercent / 100, level: mac.ram.level)
                     HStack(spacing: 16) {
-                        InfoRow(label: "Всього", value: mac.ram.totalGB.formattedGB)
-                        InfoRow(label: "Використано", value: mac.ram.usedGB.formattedGB)
-                        InfoRow(label: "Доступно", value: mac.ram.freeGB.formattedGB)
+                        InfoRow(label: "Всього", value: mac.ram.isAvailable ? mac.ram.totalGB.formattedGB : "—")
+                        InfoRow(label: "Використано", value: mac.ram.isAvailable ? mac.ram.usedGB.formattedGB : "—")
+                        InfoRow(label: "Доступно", value: mac.ram.freeDisplay)
                         InfoRow(label: "Тип", value: mac.ram.type)
                     }
                 }
@@ -146,10 +146,10 @@ struct BatteryDetailView: View {
                     Label("Ємність", systemImage: "battery.100percent")
                         .font(.headline)
                     Divider()
-                    InfoRow(label: "Поточна максимальна", value: mac.battery.isPresent ? "\(mac.battery.maxCapacity) mAh" : "—")
-                    InfoRow(label: "Заводська", value: mac.battery.isPresent ? "\(mac.battery.designCapacity) mAh" : "—")
-                    InfoRow(label: "Поточний заряд", value: mac.battery.isPresent ? "\(mac.battery.currentCharge) mAh (\(mac.battery.chargeDisplay))" : "—")
-                    InfoRow(label: "Втрачено", value: mac.battery.isPresent ? "\(max(0, mac.battery.designCapacity - mac.battery.maxCapacity)) mAh" : "—")
+                    InfoRow(label: "Поточна максимальна", value: mac.battery.healthAvailable ? "\(mac.battery.maxCapacity) mAh" : "Недоступно")
+                    InfoRow(label: "Заводська", value: mac.battery.healthAvailable ? "\(mac.battery.designCapacity) mAh" : "Недоступно")
+                    InfoRow(label: "Поточний заряд", value: mac.battery.chargeAvailable ? "\(mac.battery.currentCharge) mAh (\(mac.battery.chargeDisplay))" : "Недоступно")
+                    InfoRow(label: "Втрачено", value: mac.battery.healthAvailable ? "\(max(0, mac.battery.designCapacity - mac.battery.maxCapacity)) mAh" : "Недоступно")
                 }
                 .sectionCard()
                 
@@ -160,6 +160,10 @@ struct BatteryDetailView: View {
                     Divider()
                     if !mac.battery.isPresent {
                         Text("На цьому Mac вбудовану батарею не виявлено.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else if !mac.battery.healthAvailable {
+                        Text("macOS не надала дані про заводську та поточну ємність батареї.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     } else if mac.battery.healthPercent < 80 {
@@ -208,11 +212,11 @@ struct StorageDetailView: View {
                         .frame(height: 16)
                     
                     HStack {
-                        Text("Використано: \(mac.storage.usedGB.formattedGB)")
+                        Text("Використано: \(mac.storage.isAvailable ? mac.storage.usedGB.formattedGB : "—")")
                         Spacer()
-                        Text("Вільно: \(mac.storage.freeGB.formattedGB)")
+                        Text("Вільно: \(mac.storage.freeDisplay)")
                         Spacer()
-                        Text("Всього: \(mac.storage.totalGB.formattedGB)")
+                        Text("Всього: \(mac.storage.isAvailable ? mac.storage.totalGB.formattedGB : "—")")
                     }
                     .font(.subheadline)
                 }
@@ -225,7 +229,7 @@ struct StorageDetailView: View {
                     InfoRow(label: "Тип носія", value: mac.storage.type)
                     InfoRow(label: "Файлова система", value: mac.storage.fileSystem)
                     InfoRow(label: "SMART статус", value: mac.storage.smartStatus)
-                    InfoRow(label: "Використання", value: mac.storage.usagePercent.formattedPercent)
+                    InfoRow(label: "Використання", value: mac.storage.usageDisplay)
                 }
                 .sectionCard()
             }
@@ -284,23 +288,25 @@ struct ProcessesView: View {
     }
     
     private func fetchProcesses() {
+        let order = sortBy
         DispatchQueue.global(qos: .userInitiated).async {
-            let cmd = sortBy == "cpu" ? "ps aux | sort -nrk 3 | head -30" : "ps aux | sort -nrk 4 | head -30"
-            let output = Shell.run(cmd)
+            let output = Shell.run("/bin/ps", arguments: ["-A", "-o", "user=,pid=,%cpu=,rss=,comm="]).output
             var procs: [MacHealth.ProcessInfo] = []
             
-            for line in output.components(separatedBy: "\n").dropFirst() {
+            for line in output.components(separatedBy: "\n") {
                 let parts = line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-                guard parts.count >= 11 else { continue }
+                guard parts.count >= 5 else { continue }
                 
                 var proc = MacHealth.ProcessInfo()
                 proc.user = parts[0]
                 proc.pid = Int(parts[1]) ?? 0
                 proc.cpuPercent = Double(parts[2]) ?? 0
-                proc.memMB = (Double(parts[5]) ?? 0) / 1024
-                proc.name = parts[10...].joined(separator: " ")
+                proc.memMB = (Double(parts[3]) ?? 0) / 1024
+                proc.name = parts[4...].joined(separator: " ")
                 procs.append(proc)
             }
+            procs.sort { order == "cpu" ? $0.cpuPercent > $1.cpuPercent : $0.memMB > $1.memMB }
+            procs = Array(procs.prefix(30))
             
             DispatchQueue.main.async {
                 processes = procs

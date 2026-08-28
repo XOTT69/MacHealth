@@ -23,7 +23,7 @@ class USBMonitorService: ObservableObject {
     func scan() {
         isScanning = true
         DispatchQueue.global(qos: .utility).async { [weak self] in
-            let output = Shell.run("system_profiler SPUSBDataType 2>/dev/null")
+            let output = Shell.systemProfiler("SPUSBDataType")
             let parsed = self?.parseUSBDevices(output) ?? []
             
             DispatchQueue.main.async {

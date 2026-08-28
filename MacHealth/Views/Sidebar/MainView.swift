@@ -89,7 +89,7 @@ struct SidebarView: View {
                     .foregroundStyle(.blue.gradient)
                 Text("MacHealth")
                     .font(.headline)
-                Text("v2.0")
+                Text("v3.0")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

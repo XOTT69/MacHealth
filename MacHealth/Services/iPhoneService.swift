@@ -107,7 +107,7 @@ final class iPhoneService: ObservableObject {
     }
     
     private func fetchViaLibimobiledevice() {
-        let devices = Shell.run("\(tool("idevice_id")) -l 2>/dev/null")
+        let devices = Shell.run(tool("idevice_id"), arguments: ["-l"]).output
         let deviceID = devices.components(separatedBy: .newlines).first { Self.isValidDeviceID($0) } ?? ""
         
         if deviceID.isEmpty {
@@ -121,19 +121,26 @@ final class iPhoneService: ObservableObject {
         }
 
         let trustState = checkTrust(deviceID: deviceID)
-        let prefix = "\(tool("ideviceinfo")) -u \(deviceID)"
-        let name = Shell.run("\(prefix) -k DeviceName 2>/dev/null")
-        let productType = Shell.run("\(prefix) -k ProductType 2>/dev/null")
-        let serial = Shell.run("\(prefix) -k SerialNumber 2>/dev/null")
-        let ios = Shell.run("\(prefix) -k ProductVersion 2>/dev/null")
-        let build = Shell.run("\(prefix) -k BuildVersion 2>/dev/null")
-        let wifi = Shell.run("\(prefix) -k WiFiAddress 2>/dev/null")
-        let bt = Shell.run("\(prefix) -k BluetoothAddress 2>/dev/null")
-        let imei = Shell.run("\(prefix) -k InternationalMobileEquipmentIdentity 2>/dev/null")
-        let battLevel = Shell.run("\(prefix) -q com.apple.mobile.battery -k BatteryCurrentCapacity 2>/dev/null")
-        let activation = Shell.run("\(prefix) -k ActivationState 2>/dev/null")
-        let totalDisk = Shell.run("\(prefix) -q com.apple.disk_usage -k TotalDiskCapacity 2>/dev/null")
-        let freeDisk = Shell.run("\(prefix) -q com.apple.disk_usage -k AmountDataAvailable 2>/dev/null")
+        let infoTool = tool("ideviceinfo")
+        func info(_ key: String, domain: String? = nil) -> String {
+            var arguments = ["-u", deviceID]
+            if let domain { arguments += ["-q", domain] }
+            arguments += ["-k", key]
+            let result = Shell.run(infoTool, arguments: arguments)
+            return result.succeeded ? result.output : ""
+        }
+        let name = info("DeviceName")
+        let productType = info("ProductType")
+        let serial = info("SerialNumber")
+        let ios = info("ProductVersion")
+        let build = info("BuildVersion")
+        let wifi = info("WiFiAddress")
+        let bt = info("BluetoothAddress")
+        let imei = info("InternationalMobileEquipmentIdentity")
+        let battLevel = info("BatteryCurrentCapacity", domain: "com.apple.mobile.battery")
+        let activation = info("ActivationState")
+        let totalDisk = info("TotalDiskCapacity", domain: "com.apple.disk_usage")
+        let freeDisk = info("AmountDataAvailable", domain: "com.apple.disk_usage")
         
         let modelName = PhoneData.modelMap[productType] ?? productType
         
@@ -208,8 +215,8 @@ final class iPhoneService: ObservableObject {
 
     private func checkTrust(deviceID: String) -> DeviceTrustState {
         guard toolPath(for: "idevicepair") != nil else { return .unavailable }
-        let status = Shell.run("\(tool("idevicepair")) -u \(deviceID) validate >/dev/null 2>&1; echo $?")
-        return status == "0" ? .trusted : .needsTrust
+        let result = Shell.run(tool("idevicepair"), arguments: ["-u", deviceID, "validate"])
+        return result.succeeded ? .trusted : .needsTrust
     }
 
     /// Скануються лише папки, які користувач обрав сам, і тільки в структурі MacHealth для цього UDID.
@@ -256,13 +263,15 @@ final class iPhoneService: ObservableObject {
     }
 
     private func toolPath(for tool: String) -> String? {
-        let candidates = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"]
+        let pathDirectories = Foundation.ProcessInfo.processInfo.environment["PATH"]?
+            .split(separator: ":")
+            .map(String.init) ?? []
+        let candidates = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"] + pathDirectories
         for directory in candidates {
             let path = "\(directory)/\(tool)"
             if FileManager.default.isExecutableFile(atPath: path) { return path }
         }
-        let fromPath = Shell.run("command -v \(tool) 2>/dev/null")
-        return fromPath.isEmpty ? nil : fromPath
+        return nil
     }
 
     private func tool(_ name: String) -> String {

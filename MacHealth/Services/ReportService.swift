@@ -8,7 +8,7 @@ class ReportService {
         
         var report = """
         ╔═══════════════════════════════════════════════════════╗
-        ║          MacHealth v2.0 — Звіт діагностики            ║
+        ║          MacHealth v3.0 — Звіт діагностики            ║
         ╚═══════════════════════════════════════════════════════╝
         
         📅 Дата: \(date)
@@ -31,9 +31,9 @@ class ReportService {
         Здоров'я:        \(mac.battery.healthDisplay)
         Стан:            \(mac.battery.condition)
         Цикли:           \(mac.battery.cycleCount)
-        Повна ємність:   \(mac.battery.maxCapacity) mAh
-        Заводська:       \(mac.battery.designCapacity) mAh
-        Поточний заряд:  \(mac.battery.currentCharge) mAh (\(mac.battery.chargeDisplay))
+        Повна ємність:   \(mac.battery.healthAvailable ? "\(mac.battery.maxCapacity) mAh" : "Недоступно")
+        Заводська:       \(mac.battery.healthAvailable ? "\(mac.battery.designCapacity) mAh" : "Недоступно")
+        Поточний заряд:  \(mac.battery.chargeAvailable ? "\(mac.battery.currentCharge) mAh (\(mac.battery.chargeDisplay))" : "Недоступно")
         Температура:     \(mac.battery.temperatureDisplay)
         Напруга:         \(String(format: "%.2f В", mac.battery.voltage))
         Зарядка:         \(mac.battery.isCharging ? "Так" : "Ні")
@@ -43,7 +43,7 @@ class ReportService {
         ═══════════════════════════════════════════════════════
         Модель:          \(mac.cpu.name)
         Ядра:            \(mac.cpu.cores) (P:\(mac.cpu.perfCores) E:\(mac.cpu.effCores))
-        Навантаження:    \(mac.cpu.usage.formattedPercent)
+        Навантаження:    \(mac.cpu.usageDisplay)
         
         ═══════════════════════════════════════════════════════
          🎮 ГРАФІКА
@@ -55,17 +55,17 @@ class ReportService {
         ═══════════════════════════════════════════════════════
          🧠 ОЗП
         ═══════════════════════════════════════════════════════
-        Всього:          \(mac.ram.totalGB.formattedGB)
-        Використано:     \(mac.ram.usedGB.formattedGB) (\(mac.ram.usagePercent.formattedPercent))
-        Доступно:        \(mac.ram.freeGB.formattedGB)
+        Всього:          \(mac.ram.isAvailable ? mac.ram.totalGB.formattedGB : "—")
+        Використано:     \(mac.ram.isAvailable ? mac.ram.usedGB.formattedGB : "—") (\(mac.ram.usageDisplay))
+        Доступно:        \(mac.ram.freeDisplay)
         Тип:             \(mac.ram.type)
         
         ═══════════════════════════════════════════════════════
          💾 СХОВИЩЕ
         ═══════════════════════════════════════════════════════
-        Всього:          \(mac.storage.totalGB.formattedGB)
-        Використано:     \(mac.storage.usedGB.formattedGB) (\(mac.storage.usagePercent.formattedPercent))
-        Вільно:          \(mac.storage.freeGB.formattedGB)
+        Всього:          \(mac.storage.isAvailable ? mac.storage.totalGB.formattedGB : "—")
+        Використано:     \(mac.storage.isAvailable ? mac.storage.usedGB.formattedGB : "—") (\(mac.storage.usageDisplay))
+        Вільно:          \(mac.storage.freeDisplay)
         Тип:             \(mac.storage.type)
         SMART:           \(mac.storage.smartStatus)
         
@@ -114,8 +114,8 @@ class ReportService {
         
         ═══════════════════════════════════════════════════════
         
-        Згенеровано MacHealth v2.0
-        https://github.com/xott/MacHealth
+        Згенеровано MacHealth v3.0
+        https://github.com/XOTT69/MacHealth
         
         """
         

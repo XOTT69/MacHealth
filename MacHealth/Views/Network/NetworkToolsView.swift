@@ -4,6 +4,7 @@ struct NetworkToolsView: View {
     @ObservedObject var mac: MacDiagService
     @ObservedObject var network: NetworkService
     @State private var externalIP: String = "—"
+    @State private var isFetchingExternalIP = false
     
     var body: some View {
         ScrollView {
@@ -24,7 +25,18 @@ struct NetworkToolsView: View {
                         InfoRow(label: "Швидкість", value: mac.network.wifiSpeed)
                         InfoRow(label: "Точка доступу", value: mac.network.wifiBSSID)
                         InfoRow(label: "Локальна IP", value: mac.network.localIP)
-                        InfoRow(label: "Зовнішня IP", value: externalIP)
+                        HStack {
+                            InfoRow(label: "Зовнішня IP", value: externalIP)
+                            Button(isFetchingExternalIP ? "Визначення…" : "Визначити") {
+                                isFetchingExternalIP = true
+                                network.fetchExternalIP { ip in
+                                    externalIP = ip
+                                    isFetchingExternalIP = false
+                                }
+                            }
+                            .buttonStyle(.borderless)
+                            .disabled(isFetchingExternalIP)
+                        }
                         InfoRow(label: "MAC-адреса", value: mac.network.macAddress)
                         InfoRow(label: "Bluetooth", value: mac.network.bluetoothVersion)
                     }
@@ -65,9 +77,6 @@ struct NetworkToolsView: View {
         .onAppear {
             mac.requestWiFiAccess()
             mac.fetchAll()
-            network.fetchExternalIP { ip in
-                externalIP = ip
-            }
         }
     }
     
@@ -184,6 +193,9 @@ struct SpeedTestView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                Text("Speed Test виконується лише після натискання кнопки та завантажує 10 МБ із Cloudflare для вимірювання download.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .padding(24)
         }

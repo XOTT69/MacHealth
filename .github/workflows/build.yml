@@ -23,6 +23,7 @@ jobs:
     
     - name: Build
       run: |
+        set -o pipefail
         xcodebuild -project MacHealth.xcodeproj \
           -scheme MacHealth \
           -configuration Release \
@@ -33,17 +34,19 @@ jobs:
           ENABLE_APP_SANDBOX=NO \
           build
     
-    - name: Create ZIP
+    - name: Create and verify release ZIP
+      if: startsWith(github.ref, 'refs/tags/v')
       run: |
-        cd build/Build/Products/Release
-        zip -r ../../../../MacHealth.zip MacHealth.app
-        cd ../../../..
+        ditto -c -k --sequesterRsrc --keepParent \
+          build/Build/Products/Release/MacHealth.app MacHealth.zip
+        unzip -t MacHealth.zip
+        unzip -Z1 MacHealth.zip | grep '^MacHealth.app/Contents/Info.plist$'
     
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MacHealth
-        path: MacHealth.zip
+        name: MacHealth-macOS
+        path: build/Build/Products/Release/MacHealth.app
     
     - name: Release
       if: startsWith(github.ref, 'refs/tags/v')

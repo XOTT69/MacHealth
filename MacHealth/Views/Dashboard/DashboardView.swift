@@ -10,9 +10,9 @@ struct DashboardView: View {
                 healthHero
 
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                    MetricTile(title: "Процесор", value: mac.cpu.usage.formattedPercent, detail: mac.cpu.name, icon: "cpu", level: mac.cpu.level)
-                    MetricTile(title: "Пам'ять", value: mac.ram.usagePercent.formattedPercent, detail: "\(mac.ram.freeGB.formattedGB) доступно", icon: "memorychip", level: mac.ram.level)
-                    MetricTile(title: "Сховище", value: mac.storage.usagePercent.formattedPercent, detail: "\(mac.storage.freeGB.formattedGB) вільно", icon: "internaldrive", level: mac.storage.level)
+                    MetricTile(title: "Процесор", value: mac.cpu.usageDisplay, detail: mac.cpu.name, icon: "cpu", level: mac.cpu.level)
+                    MetricTile(title: "Пам'ять", value: mac.ram.usageDisplay, detail: mac.ram.isAvailable ? "\(mac.ram.freeDisplay) доступно" : "Дані недоступні", icon: "memorychip", level: mac.ram.level)
+                    MetricTile(title: "Сховище", value: mac.storage.usageDisplay, detail: mac.storage.isAvailable ? "\(mac.storage.freeDisplay) вільно" : "Дані недоступні", icon: "internaldrive", level: mac.storage.level)
                     MetricTile(title: "Батарея", value: mac.battery.healthDisplay, detail: mac.battery.isPresent ? "\(mac.battery.cycleCount) циклів • \(mac.battery.chargeDisplay) заряд" : mac.battery.condition, icon: "battery.75percent", level: mac.battery.level)
                 }
 
@@ -37,7 +37,7 @@ struct DashboardView: View {
                         ProgressBarSimple(value: mac.battery.healthPercent / 100, level: mac.battery.level)
                             .padding(.bottom, 6)
                         InfoRow(label: "Здоров'я", value: mac.battery.healthDisplay)
-                        InfoRow(label: "Ємність", value: "\(mac.battery.maxCapacity) / \(mac.battery.designCapacity) mAh")
+                        InfoRow(label: "Ємність", value: mac.battery.healthAvailable ? "\(mac.battery.maxCapacity) / \(mac.battery.designCapacity) mAh" : "Недоступно")
                         InfoRow(label: "Статус", value: mac.battery.condition)
                         InfoRow(label: "Час", value: mac.battery.timeRemaining)
                     } else {

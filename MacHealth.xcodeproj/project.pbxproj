@@ -245,10 +245,10 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MacHealth;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "MacHealth v2.0";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "MacHealth v3.0";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "MacHealth використовує геолокацію лише для відображення назви та параметрів поточної Wi-Fi мережі.";
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.machealth.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -271,10 +271,10 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = MacHealth;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "MacHealth v2.0";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "MacHealth v3.0";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "MacHealth використовує геолокацію лише для відображення назви та параметрів поточної Wi-Fi мережі.";
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");
-				MARKETING_VERSION = 2.0.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.machealth.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

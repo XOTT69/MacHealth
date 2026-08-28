@@ -12,6 +12,8 @@ struct MacSystemInfo {
 
 struct BatteryData {
     var isPresent: Bool = false
+    var healthAvailable: Bool = false
+    var chargeAvailable: Bool = false
     var healthPercent: Double = 0
     var cycleCount: Int = 0
     var maxCapacity: Int = 0
@@ -26,7 +28,7 @@ struct BatteryData {
     var voltage: Double = 0
     
     var level: HealthLevel {
-        guard isPresent else { return .unknown }
+        guard isPresent && healthAvailable else { return .unknown }
         if healthPercent >= 85 { return .excellent }
         else if healthPercent >= 70 { return .good }
         else if healthPercent >= 50 { return .warning }
@@ -34,7 +36,8 @@ struct BatteryData {
     }
 
     var healthDisplay: String {
-        isPresent ? healthPercent.formattedPercent : "—"
+        guard isPresent else { return "—" }
+        return healthAvailable ? healthPercent.formattedPercent : "Недоступно"
     }
 
     var temperatureDisplay: String {
@@ -43,11 +46,12 @@ struct BatteryData {
 
     var chargeDisplay: String {
         guard isPresent else { return "—" }
-        return chargePercent.formattedPercent
+        return chargeAvailable ? chargePercent.formattedPercent : "Недоступно"
     }
 }
 
 struct CPUData {
+    var isAvailable: Bool = false
     var name: String = "—"
     var cores: Int = 0
     var perfCores: Int = 0
@@ -56,11 +60,14 @@ struct CPUData {
     var temperature: Double = 0
     
     var level: HealthLevel {
+        guard isAvailable else { return .unknown }
         if usage < 60 { return .excellent }
         else if usage < 80 { return .good }
         else if usage < 95 { return .warning }
         else { return .critical }
     }
+
+    var usageDisplay: String { isAvailable ? usage.formattedPercent : "—" }
 }
 
 struct GPUData {
@@ -70,6 +77,7 @@ struct GPUData {
 }
 
 struct RAMData {
+    var isAvailable: Bool = false
     var totalGB: Double = 0
     var usedGB: Double = 0
     var freeGB: Double = 0
@@ -77,18 +85,23 @@ struct RAMData {
     var pressure: Double = 0
     
     var usagePercent: Double {
-        totalGB > 0 ? (usedGB / totalGB) * 100 : 0
+        isAvailable && totalGB > 0 ? (usedGB / totalGB) * 100 : 0
     }
     
     var level: HealthLevel {
+        guard isAvailable else { return .unknown }
         if usagePercent < 60 { return .excellent }
         else if usagePercent < 80 { return .good }
         else if usagePercent < 95 { return .warning }
         else { return .critical }
     }
+
+    var usageDisplay: String { isAvailable ? usagePercent.formattedPercent : "—" }
+    var freeDisplay: String { isAvailable ? freeGB.formattedGB : "—" }
 }
 
 struct StorageData {
+    var isAvailable: Bool = false
     var totalGB: Double = 0
     var usedGB: Double = 0
     var freeGB: Double = 0
@@ -97,15 +110,19 @@ struct StorageData {
     var smartStatus: String = "Недоступно"
     
     var usagePercent: Double {
-        totalGB > 0 ? (usedGB / totalGB) * 100 : 0
+        isAvailable && totalGB > 0 ? (usedGB / totalGB) * 100 : 0
     }
     
     var level: HealthLevel {
+        guard isAvailable else { return .unknown }
         if usagePercent < 70 { return .excellent }
         else if usagePercent < 85 { return .good }
         else if usagePercent < 95 { return .warning }
         else { return .critical }
     }
+
+    var usageDisplay: String { isAvailable ? usagePercent.formattedPercent : "—" }
+    var freeDisplay: String { isAvailable ? freeGB.formattedGB : "—" }
 }
 
 struct NetworkData {

@@ -28,8 +28,8 @@ class HardwareTestService: ObservableObject {
         updateStatus("Тест запису на диск...")
         
         let path = temporaryTestPath(named: "write")
-        let output = Shell.run("dd if=/dev/zero of=\(path) bs=1m count=128 2>&1 | tail -1")
-        Shell.run("rm -f \(path)")
+        let output = Shell.run("/bin/dd", arguments: ["if=/dev/zero", "of=\(path)", "bs=1m", "count=128"], timeout: 45).output
+        try? FileManager.default.removeItem(atPath: path)
         
         var speed: Double = 0
         if output.contains("bytes/sec") || output.contains("MB/s") {
@@ -66,11 +66,10 @@ class HardwareTestService: ObservableObject {
         
         let path = temporaryTestPath(named: "read")
         // Створюємо власний тимчасовий файл, не чіпаючи файли інших запусків.
-        Shell.run("dd if=/dev/zero of=\(path) bs=1m count=128 2>/dev/null")
-        Shell.run("purge 2>/dev/null") // Очищаємо кеш
+        _ = Shell.run("/bin/dd", arguments: ["if=/dev/zero", "of=\(path)", "bs=1m", "count=128"], timeout: 45)
         
-        let output = Shell.run("dd if=\(path) of=/dev/null bs=1m 2>&1 | tail -1")
-        Shell.run("rm -f \(path)")
+        let output = Shell.run("/bin/dd", arguments: ["if=\(path)", "of=/dev/null", "bs=1m"], timeout: 45).output
+        try? FileManager.default.removeItem(atPath: path)
         
         var speed: Double = 0
         if let parenRange = output.range(of: "(") {
@@ -98,7 +97,7 @@ class HardwareTestService: ObservableObject {
     private func testNetworkLatency() {
         updateStatus("Тест мережевої затримки...")
         
-        let output = Shell.run("ping -c 5 8.8.8.8 2>/dev/null | tail -1")
+        let output = Shell.run("/sbin/ping", arguments: ["-c", "5", "-W", "1000", "1.1.1.1"], timeout: 30).output
         var avgMs: Double = 0
         
         if output.contains("/") {
@@ -127,7 +126,7 @@ class HardwareTestService: ObservableObject {
         updateStatus("Тест DNS...")
         
         let start = Date()
-        let _ = Shell.run("nslookup google.com 2>/dev/null")
+        let _ = Shell.run("/usr/bin/nslookup", arguments: ["google.com"], timeout: 15)
         let elapsed = Date().timeIntervalSince(start) * 1000
         
         let level: HealthLevel
@@ -148,7 +147,7 @@ class HardwareTestService: ObservableObject {
     private func checkMemoryAvailability() {
         updateStatus("Перевірка доступної пам'яті...")
 
-        let output = Shell.run("memory_pressure -Q 2>/dev/null")
+        let output = Shell.run("/usr/bin/memory_pressure", arguments: ["-Q"]).output
         let freePercent = extractPercent(from: output)
 
         let level: HealthLevel

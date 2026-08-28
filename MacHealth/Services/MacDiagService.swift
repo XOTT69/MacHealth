@@ -13,7 +13,7 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
     @Published var network = NetworkData()
     @Published var display = DisplayData()
     @Published var isLoading = false
-    @Published var overallHealth: HealthLevel = .excellent
+    @Published var overallHealth: HealthLevel = .unknown
     @Published var lastUpdated: Date?
     
     private var timer: Timer?
@@ -95,9 +95,9 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
         let identifier = Shell.sysctl("hw.model")
         let serial = Shell.grep(from: hw, pattern: "Serial Number")
         let chip = Shell.grep(from: hw, pattern: "Chip").notEmpty ?? Shell.sysctl("machdep.cpu.brand_string")
-        let osVer = Shell.run("sw_vers -productVersion")
-        let osBuild = Shell.run("sw_vers -buildVersion")
-        let uptime = Shell.run("uptime | sed 's/.*up //' | sed 's/,.*//'")
+        let osVer = Shell.run("/usr/bin/sw_vers", arguments: ["-productVersion"]).output
+        let osBuild = Shell.run("/usr/bin/sw_vers", arguments: ["-buildVersion"]).output
+        let uptime = formatUptime(Shell.run("/usr/bin/uptime").output)
         let memSize = Shell.grep(from: hw, pattern: "Memory")
         
         DispatchQueue.main.async { [weak self] in
@@ -116,9 +116,10 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
     // MARK: - Battery
     
     private func fetchBattery() {
-        let raw = Shell.run("ioreg -r -c AppleSmartBattery")
+        let batteryResult = Shell.run("/usr/sbin/ioreg", arguments: ["-r", "-c", "AppleSmartBattery"])
+        let raw = batteryResult.output
 
-        guard !raw.isEmpty else {
+        guard batteryResult.succeeded, !raw.isEmpty else {
             DispatchQueue.main.async { [weak self] in
                 self?.battery = BatteryData(isPresent: false, condition: "Батарея не виявлена")
             }
@@ -138,27 +139,36 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
         let tempRaw = extractInt(from: raw, key: "Temperature")
         let voltage = extractInt(from: raw, key: "Voltage")
         
-        let health = desCap > 0 && maxCap > 0 ? min(Double(maxCap) / Double(desCap) * 100, 100) : 0
+        let healthAvailable = desCap > 0 && maxCap > 0
+        let health = healthAvailable ? min(Double(maxCap) / Double(desCap) * 100, 100) : 0
+        let hasRemainingCapacity = raw.contains("\"RemainingCapacity\"")
+        let hasReportedCharge = raw.contains("\"CurrentCapacity\"")
+        let derivedCharge = maxCap > 0 && hasRemainingCapacity ? Double(remainingCap) / Double(maxCap) * 100 : -1
+        let chargeAvailable = derivedCharge >= 0 || hasReportedCharge
+        let charge = derivedCharge >= 0 ? derivedCharge : Double(reportedChargePercent)
         let temp = Double(tempRaw) / 100.0
         
         let condition: String
-        if health >= 80 { condition = "Нормальний" }
+        if !healthAvailable { condition = "Стан ємності недоступний" }
+        else if health >= 80 { condition = "Нормальний" }
         else if health >= 60 { condition = "Зношений" }
         else { condition = "Потребує заміни" }
         
-        let powerState = Shell.run("pmset -g batt")
-        let timeStr = Shell.run("pmset -g batt | grep -o '[0-9]*:[0-9]*'")
+        let powerState = Shell.run("/usr/bin/pmset", arguments: ["-g", "batt"]).output
+        let timeStr = extractTime(from: powerState)
         let isFullyCharged = powerState.localizedCaseInsensitiveContains("charged")
         
         DispatchQueue.main.async { [weak self] in
             self?.battery = BatteryData(
                 isPresent: true,
+                healthAvailable: healthAvailable,
+                chargeAvailable: chargeAvailable,
                 healthPercent: health,
                 cycleCount: cycleCount,
                 maxCapacity: maxCap,
                 designCapacity: desCap,
                 currentCharge: curCap,
-                chargePercent: min(max(Double(reportedChargePercent), 0), 100),
+                chargePercent: min(max(charge, 0), 100),
                 isCharging: isCharging,
                 temperature: temp,
                 temperatureAvailable: tempRaw > 0,
@@ -177,12 +187,17 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
         let perf = Int(Shell.sysctl("hw.perflevel0.logicalcpu")) ?? 0
         let eff = Int(Shell.sysctl("hw.perflevel1.logicalcpu")) ?? 0
         
-        let usageStr = Shell.run("ps -A -o %cpu | awk '{s+=$1} END {print s}'")
-        let totalUsage = Double(usageStr) ?? 0
+        let cpuResult = Shell.run("/bin/ps", arguments: ["-A", "-o", "%cpu"])
+        let cpuLines = cpuResult.output
+        let totalUsage = cpuLines.components(separatedBy: .newlines)
+            .dropFirst()
+            .compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+            .reduce(0, +)
         let normalized = cores > 0 ? min(totalUsage / Double(cores), 100) : 0
         
         DispatchQueue.main.async { [weak self] in
             self?.cpu = CPUData(
+                isAvailable: cpuResult.succeeded && cores > 0,
                 name: name,
                 cores: cores,
                 perfCores: perf,
@@ -219,15 +234,17 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
         // memory_pressure — системна оцінка доступної пам'яті, що включає
         // reclaimable/purgeable сторінки. Не додаємо compressed pages до active
         // та wired: це подвійно завищує використання на сучасних macOS.
-        let pressure = Shell.run("memory_pressure -Q 2>/dev/null")
+        let pressure = Shell.run("/usr/bin/memory_pressure", arguments: ["-Q"]).output
         let freePercent = extractMemoryFreePercent(from: pressure)
         let freeGB: Double
         let usedGB: Double
+        var didReadMemory = false
         if freePercent >= 0 {
             freeGB = totalGB * Double(freePercent) / 100
             usedGB = max(totalGB - freeGB, 0)
+            didReadMemory = true
         } else {
-            let vmStat = Shell.run("vm_stat")
+            let vmStat = Shell.run("/usr/bin/vm_stat").output
             let pageSize = parsePageSize(from: vmStat)
             var active: Double = 0, wired: Double = 0
             for line in vmStat.components(separatedBy: "\n") {
@@ -236,12 +253,14 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
             }
             usedGB = min((active + wired) * pageSize / 1_073_741_824, totalGB)
             freeGB = max(totalGB - usedGB, 0)
+            didReadMemory = !vmStat.isEmpty
         }
         
-        let memType = Shell.run("system_profiler SPMemoryDataType 2>/dev/null | grep 'Type:' | head -1 | awk -F': ' '{print $2}'")
+        let memType = Shell.grep(from: Shell.systemProfiler("SPMemoryDataType"), pattern: "Type:")
         
         DispatchQueue.main.async { [weak self] in
             self?.ram = RAMData(
+                isAvailable: totalGB > 0 && didReadMemory,
                 totalGB: totalGB,
                 usedGB: usedGB,
                 freeGB: freeGB,
@@ -254,22 +273,27 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
     // MARK: - Storage
     
     private func fetchStorage() {
-        let df = Shell.run("df -g / | tail -1")
-        let parts = df.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+        let df = Shell.run("/bin/df", arguments: ["-kP", "/"]).output
+        let parts = df.components(separatedBy: .newlines).last?
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty } ?? []
         
         var total: Double = 0, used: Double = 0, free: Double = 0
         if parts.count >= 4 {
-            total = Double(parts[1]) ?? 0
-            used = Double(parts[2]) ?? 0
-            free = Double(parts[3]) ?? 0
+            total = (Double(parts[1]) ?? 0) / 1_048_576
+            used = (Double(parts[2]) ?? 0) / 1_048_576
+            free = (Double(parts[3]) ?? 0) / 1_048_576
         }
         
-        let diskType = Shell.run("system_profiler SPStorageDataType 2>/dev/null | grep 'Medium Type' | awk -F': ' '{print $2}'")
-        let fs = Shell.run("diskutil info / 2>/dev/null | grep 'File System' | awk -F': ' '{print $2}'")
-        let smart = Shell.run("diskutil info disk0 2>/dev/null | grep 'SMART Status' | awk -F': ' '{print $2}'")
+        let storageProfile = Shell.systemProfiler("SPStorageDataType")
+        let diskInfo = Shell.run("/usr/sbin/diskutil", arguments: ["info", "/"]).output
+        let diskType = Shell.grep(from: storageProfile, pattern: "Medium Type")
+        let fs = Shell.grep(from: diskInfo, pattern: "File System Personality")
+        let smart = Shell.grep(from: Shell.run("/usr/sbin/diskutil", arguments: ["info", "disk0"]).output, pattern: "SMART Status")
         
         DispatchQueue.main.async { [weak self] in
             self?.storage = StorageData(
+                isAvailable: total > 0,
                 totalGB: total,
                 usedGB: used,
                 freeGB: free,
@@ -291,10 +315,16 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
         let linkSpeed = wifi.map { String(format: "%.0f Mbps", $0.transmitRate()) } ?? "—"
         let bssid = wifi?.bssid() ?? "—"
 
-        let localIP = Shell.run("ipconfig getifaddr \(interface) 2>/dev/null")
-        let mac = Shell.run("ifconfig \(interface) 2>/dev/null | grep 'ether' | awk '{print $2}'")
+        let localIP = Shell.run("/usr/sbin/ipconfig", arguments: ["getifaddr", interface]).output
+        let ifconfig = Shell.run("/sbin/ifconfig", arguments: [interface]).output
+        let mac = ifconfig.components(separatedBy: .newlines)
+            .first { $0.trimmingCharacters(in: .whitespaces).hasPrefix("ether ") }?
+            .trimmingCharacters(in: .whitespaces)
+            .split(separator: " ")
+            .dropFirst()
+            .first.map(String.init) ?? ""
         let wifiOn = wifi?.powerOn() ?? false
-        let bt = Shell.run("system_profiler SPBluetoothDataType 2>/dev/null | grep 'Bluetooth Core Spec' | awk -F': ' '{print $2}'")
+        let bt = Shell.grep(from: Shell.systemProfiler("SPBluetoothDataType"), pattern: "Bluetooth Core Spec")
         let accessMessage: String?
         if wifi != nil && ssid == nil {
             accessMessage = "Щоб показати назву мережі, дозвольте MacHealth доступ до геолокації в Системних параметрах."
@@ -384,5 +414,20 @@ final class MacDiagService: NSObject, ObservableObject, CLLocationManagerDelegat
               let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
               let range = Range(match.range(at: 1), in: text) else { return -1 }
         return Int(text[range]) ?? -1
+    }
+
+    private func extractTime(from text: String) -> String {
+        let pattern = "\\b\\d{1,2}:\\d{2}\\b"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let range = Range(match.range, in: text) else { return "" }
+        return String(text[range])
+    }
+
+    private func formatUptime(_ text: String) -> String {
+        guard let upRange = text.range(of: " up ") else { return text.orDash }
+        let tail = text[upRange.upperBound...]
+        return tail.split(separator: ",", maxSplits: 1).first
+            .map { String($0).trimmingCharacters(in: .whitespaces) } ?? text.orDash
     }
 }
